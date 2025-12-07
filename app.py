@@ -66,7 +66,8 @@ st.markdown("""
         color: white;
         font-family: sans-serif;
     }
-    .sub-text { font-weight: bold; font-size: 0.9em; margin-left: 10px; letter-spacing: 0.5px; }
+    /* Metin boyutu ve hizalaması logoya göre ayarlandı */
+    .sub-text { font-weight: bold; font-size: 1.1em; margin-left: 12px; letter-spacing: 1px; }
     
     /* Diğerleri */
     .req-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; font-size: 0.9em; height: 100%; }
@@ -81,7 +82,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. LOGOLAR (GARANTİ LİNKLER) ---
+# --- 2. LOGOLAR (YENİ RENKLİ SVG) ---
 STORE_LOGOS = {
     "Steam": "https://cdn.simpleicons.org/steam/171a21",
     "Epic Games": "https://cdn.simpleicons.org/epicgames/333333",
@@ -91,7 +92,8 @@ STORE_LOGOS = {
 }
 
 SUB_LOGOS = {
-    "Game Pass": "https://cdn.simpleicons.org/xbox/107C10", # XBOX İKONU (ASLA KIRILMAZ)
+    # YENİ RENKLİ SVG LOGO
+    "Game Pass": "https://upload.wikimedia.org/wikipedia/commons/4/46/Xbox_Game_Pass_2020_logo_-_alternative_version_%28colored%29.svg",
     "EA Play": "https://cdn.simpleicons.org/ea/FF4747",
     "Ubisoft+": "https://cdn.simpleicons.org/ubisoft/0057ff"
 }
@@ -121,7 +123,6 @@ if 'home_limits' not in st.session_state: st.session_state.home_limits = {"p1": 
 
 # --- SAYFAYI YUKARI KAYDIRMA (SCROLL TO TOP) ---
 def scroll_to_top():
-    # JavaScript Hack: Sayfayı en tepeye kaydırır
     js = """
     <script>
         var body = window.parent.document.querySelector(".main");
@@ -199,7 +200,6 @@ def get_steam_details_turkish(steam_id):
     try:
         url = f"http://store.steampowered.com/api/appdetails?appids={steam_id}&cc=tr&l=turkish"
         data = requests.get(url, timeout=3).json()
-        
         if str(steam_id) in data and data[str(steam_id)]['success']:
             game_data = data[str(steam_id)]['data']
             desc = game_data.get('short_description', 'Açıklama bulunamadı.')
@@ -248,18 +248,18 @@ def go_category(name, sort, sale):
     st.session_state.selected_cat = {"name": name, "sort": sort, "sale": sale}
     st.session_state.active_page = 'category'
     st.session_state.page_number = 0
-    scroll_to_top() # Sayfa değişince yukarı kaydır
+    scroll_to_top()
     st.rerun()
 
 def go_detail(game_data):
     st.session_state.selected_game = game_data
     st.session_state.active_page = 'detail'
-    scroll_to_top() # Sayfa değişince yukarı kaydır
+    scroll_to_top()
     st.rerun()
 
 def set_page_num(num):
     st.session_state.page_number = num
-    scroll_to_top() # Sayfa değişince yukarı kaydır
+    scroll_to_top()
     st.rerun()
 
 def increase_home_limit(key):
@@ -305,7 +305,7 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
     except: return []
 
 # ================= ARAYÜZ BAŞLIYOR =================
-scroll_to_top() # Her render'da yukarı zorla (güvenlik için)
+scroll_to_top()
 dolar_kuru = get_dollar_rate()
 
 h1, h2, h3 = st.columns([1.5, 4, 1.5])
@@ -399,7 +399,8 @@ elif st.session_state.active_page == 'detail':
         sub_n, sub_l = check_subscription(game['title'])
         if sub_n:
             border_c = SUB_COLORS.get(sub_n, "#555")
-            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c};'><img src='{sub_l}' height='24'><span class='sub-text'>{sub_n} DAHİL</span></div>""", unsafe_allow_html=True)
+            # SADECE "DAHİL" YAZISI
+            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c};'><img src='{sub_l}' height='30'><span class='sub-text'>DAHİL</span></div>""", unsafe_allow_html=True)
     with c2:
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
         mc = get_meta_color(game['meta'])
@@ -503,7 +504,8 @@ elif st.session_state.active_page == 'search':
                         sub_n, sub_l = check_subscription(game['title'])
                         if sub_n:
                             border_c = SUB_COLORS.get(sub_n, "#555")
-                            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c}; margin-top:0;'><img src='{sub_l}' height='20'><span class='sub-text'>{sub_n} DAHİL</span></div>""", unsafe_allow_html=True)
+                            # SADECE "DAHİL" YAZISI
+                            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c}; margin-top:0;'><img src='{sub_l}' height='24'><span class='sub-text'>DAHİL</span></div>""", unsafe_allow_html=True)
                         st.write("")
                         if game['meta']>0: 
                             mc=get_meta_color(game['meta'])
