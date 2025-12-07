@@ -1,11 +1,12 @@
 import streamlit as st
 import requests
 import xml.etree.ElementTree as ET
+from datetime import datetime
 
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
 
-# Yedek Resim (Kırık Linkler İçin)
+# Yedek Resim
 PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
 
 # Epic Store Kütüphanesi
@@ -15,7 +16,7 @@ try:
 except ImportError:
     EPIC_AVAILABLE = False
 
-# --- CSS STİLİ (PREMIUM TASARIM) ---
+# --- CSS STİLİ (DETAY SAYFASI DÜZELTİLDİ) ---
 st.markdown("""
 <style>
     .block-container { padding-top: 3rem; }
@@ -28,26 +29,35 @@ st.markdown("""
     
     .vitrin-title { font-size: 0.9em; font-weight: bold; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
     .vitrin-price { font-size: 1.1em; font-weight: bold; color: #28a745; margin: 2px 0; }
+    .vitrin-date { font-size: 0.75em; color: #666; margin-bottom: 5px; font-style: italic; }
     
-    /* DETAY BAŞLIK */
+    /* DETAY BAŞLIK (BEYAZ ZORLAMA) */
     .detail-title { 
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         font-size: 2.5em; 
         font-weight: 800; 
         margin-bottom: 10px; 
-        color: #212529 !important; 
+        color: #FFFFFF !important; /* Beyaz Renk */
         line-height: 1.2;
     }
     
-    /* Açıklama Kutusu */
-    .desc-box { background-color: #f8f9fa; color: #212529; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; line-height: 1.6; font-size: 1.05em; margin-bottom: 20px; }
+    /* Açıklama Kutusu (ŞEFFAF + BEYAZ YAZI) */
+    .desc-box { 
+        background-color: transparent; 
+        color: #FFFFFF !important; /* Beyaz Yazı */
+        padding: 0; 
+        border: none; 
+        line-height: 1.6; 
+        font-size: 1.05em; 
+        margin-bottom: 20px; 
+    }
     
-    /* --- YENİ ŞIK ABONELİK ROZETİ --- */
+    /* Abonelik Kartı */
     .sub-card {
         display: flex;
         align-items: center;
         background: linear-gradient(90deg, #1c1c1c, #2a2a2a);
-        border-left: 5px solid #555; /* Renk dinamik değişecek */
+        border-left: 5px solid #555;
         padding: 10px 15px;
         border-radius: 0 8px 8px 0;
         margin-top: 10px;
@@ -55,12 +65,7 @@ st.markdown("""
         color: white;
         font-family: sans-serif;
     }
-    .sub-text {
-        font-weight: bold;
-        font-size: 0.9em;
-        margin-left: 10px;
-        letter-spacing: 0.5px;
-    }
+    .sub-text { font-weight: bold; font-size: 0.9em; margin-left: 10px; letter-spacing: 0.5px; }
     
     /* Diğerleri */
     .req-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; font-size: 0.9em; height: 100%; }
@@ -75,7 +80,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. LOGOLAR ---
+# --- 2. LOGOLAR (GAME PASS DÜZELTİLDİ) ---
 STORE_LOGOS = {
     "Steam": "https://cdn.simpleicons.org/steam/171a21",
     "Epic Games": "https://cdn.simpleicons.org/epicgames/333333",
@@ -85,16 +90,15 @@ STORE_LOGOS = {
 }
 
 SUB_LOGOS = {
-    "Game Pass": "https://cdn.simpleicons.org/xbox/107C10",
+    "Game Pass": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Xbox_Game_Pass_logo.svg/512px-Xbox_Game_Pass_logo.svg.png", # Çalışan PNG
     "EA Play": "https://cdn.simpleicons.org/ea/FF4747",
     "Ubisoft+": "https://cdn.simpleicons.org/ubisoft/0057ff"
 }
 
-# Abonelik Renk Kodları
 SUB_COLORS = {
-    "Game Pass": "#107C10", # Xbox Yeşili
-    "EA Play": "#FF4747",   # EA Kırmızısı
-    "Ubisoft+": "#0099FF"   # Ubisoft Mavisi
+    "Game Pass": "#107C10",
+    "EA Play": "#FF4747",
+    "Ubisoft+": "#0099FF"
 }
 
 SUBSCRIPTIONS = {
@@ -137,21 +141,11 @@ def get_dollar_rate():
     except: return 36.50
 
 def get_game_image(deal):
-    """4 KATMANLI GÜVENLİ RESİM SEÇİCİ"""
+    """GÜVENLİ DİKEY POSTER"""
     sid = deal.get('steamAppID')
-    
-    # 1. Steam Dikey Poster (En İyi)
-    if sid and sid != "0": 
-        return f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{sid}/library_600x900.jpg"
-    
-    # 2. CheapShark Thumbnail
+    if sid and sid != "0": return f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{sid}/library_600x900.jpg"
     thumb = deal.get('thumb')
-    if thumb and "capsule" in thumb: # Eğer thumbnail linki geçerli gibiyse
-        return thumb.replace("capsule_sm_120", "header") # Header'a çevirmeyi dene
-    elif thumb:
-        return thumb
-        
-    # 3. Placeholder (Hiçbiri yoksa)
+    if thumb: return thumb
     return PLACEHOLDER_IMG
 
 def get_meta_color(score):
@@ -194,7 +188,6 @@ def get_steam_details_turkish(steam_id):
     try:
         url = f"http://store.steampowered.com/api/appdetails?appids={steam_id}&cc=tr&l=turkish"
         data = requests.get(url, timeout=3).json()
-        
         if str(steam_id) in data and data[str(steam_id)]['success']:
             game_data = data[str(steam_id)]['data']
             desc = game_data.get('short_description', 'Açıklama bulunamadı.')
@@ -215,7 +208,6 @@ def get_steam_details_turkish(steam_id):
             if 'pc_requirements' in game_data and isinstance(game_data['pc_requirements'], dict):
                 req_min = game_data['pc_requirements'].get('minimum', 'Belirtilmemiş.')
                 req_rec = game_data['pc_requirements'].get('recommended', 'Belirtilmemiş.')
-            
             return desc, media_list, req_min, req_rec
     except: pass
     return empty_return
@@ -256,10 +248,20 @@ def increase_home_limit(key):
     st.session_state.home_limits[key] += 4
     st.rerun()
 
-# --- 6. VERİ MOTORU ---
+def timestamp_to_date(ts):
+    if not ts: return ""
+    try: return datetime.fromtimestamp(ts).strftime('%d.%m.%Y')
+    except: return ""
+
+# --- 6. VERİ MOTORU (DÜZELTİLMİŞ SIRALAMA) ---
 def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
     url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy={sort_by}&onSale={on_sale}&pageSize={page_size}&pageNumber={page}"
+    # Yeni çıkanlar için CheapShark bazen karışık veriyor, biz manuel sıralayacağız
+    if sort_by == "Release":
+        url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy=Release&onSale={on_sale}&pageSize={page_size}&pageNumber={page}&desc=1" # desc=1 Eklendi
+    
     if sort_by == "Metacritic": url += "&upperPrice=60&metacritic=70"
+    
     try:
         data = requests.get(url).json()
         results = []
@@ -273,7 +275,7 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
             }
             results.append({
                 "title": d['title'],
-                "thumb": get_game_image(d), # Güvenli Resim
+                "thumb": get_game_image(d),
                 "meta": int(d['metacriticScore']),
                 "user": int(d['steamRatingPercent']),
                 "dealID": d['dealID'],
@@ -281,8 +283,14 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
                 "price": price_tl,
                 "discount": float(d['savings']),
                 "offers": [offer],
-                "store": s_name
+                "store": s_name,
+                "releaseDate": d.get('releaseDate', 0) # Sıralama için
             })
+        
+        # MANUEL SIRALAMA (GARANTİ)
+        if sort_by == "Release":
+            results.sort(key=lambda x: x['releaseDate'], reverse=True)
+            
         return results
     except: return []
 
@@ -333,6 +341,12 @@ if st.session_state.active_page == 'home':
                     with cols[j]:
                         st.image(g['thumb'], use_container_width=True)
                         st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
+                        
+                        # Yeni çıkanlar için tarih göster
+                        if sort_key == "Release" and g['releaseDate'] > 0:
+                            date_str = timestamp_to_date(g['releaseDate'])
+                            st.markdown(f"<div class='vitrin-date'>📅 {date_str}</div>", unsafe_allow_html=True)
+                        
                         c_p, c_d = st.columns([2, 1])
                         c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
@@ -372,7 +386,7 @@ elif st.session_state.active_page == 'category':
                 if st.button(f"{p_num + 1}", key=f"pg_{p_num}", type=b_type): set_page_num(p_num)
     else: st.info("Bu sayfada oyun yok.")
 
-# ================= SAYFA 3: DETAY (ŞIK ABONELİK) =================
+# ================= SAYFA 3: DETAY (DÜZELTİLDİ) =================
 elif st.session_state.active_page == 'detail':
     game = st.session_state.selected_game
     desc, media_list, req_min, req_rec = get_steam_details_turkish(game.get('steamAppID'))
@@ -380,24 +394,24 @@ elif st.session_state.active_page == 'detail':
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
         st.image(game['thumb'], use_container_width=True)
-        
-        # --- YENİ ŞIK ABONELİK ROZETİ ---
+        # --- ŞIK ABONELİK ROZETİ ---
         sub_n, sub_l = check_subscription(game['title'])
         if sub_n:
-            # Rengi Dinamik Al
-            border_color = SUB_COLORS.get(sub_n, "#555")
+            border_c = SUB_COLORS.get(sub_n, "#555")
             st.markdown(f"""
-                <div class='sub-card' style='border-left-color: {border_color};'>
+                <div class='sub-card' style='border-left-color: {border_c};'>
                     <img src='{sub_l}' height='24'>
                     <span class='sub-text'>{sub_n} DAHİL</span>
                 </div>
             """, unsafe_allow_html=True)
 
     with c2:
+        # BAŞLIK BEYAZ RENK
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
         mc = get_meta_color(game['meta'])
         st.markdown(f"""<div style="margin-bottom:15px;"><span class='score-badge {mc}'>Metacritic: {game['meta']}</span><span class='score-badge user-blue'>Steam User: %{game['user']}</span></div>""", unsafe_allow_html=True)
         
+        # AÇIKLAMA BEYAZ RENK (KUTUSUZ)
         if desc: st.markdown(f"<div class='desc-box'>{desc}</div>", unsafe_allow_html=True)
         
         st.write("### 🏷️ Mağaza Fiyatları")
@@ -506,9 +520,9 @@ elif st.session_state.active_page == 'search':
                         # ARAMA SONUCUNDA DA ŞIK ABONELİK
                         sub_n, sub_l = check_subscription(game['title'])
                         if sub_n:
-                            border_color = SUB_COLORS.get(sub_n, "#555")
+                            border_c = SUB_COLORS.get(sub_n, "#555")
                             st.markdown(f"""
-                                <div class='sub-card' style='border-left-color: {border_color}; margin-top:0;'>
+                                <div class='sub-card' style='border-left-color: {border_c}; margin-top:0;'>
                                     <img src='{sub_l}' height='20'>
                                     <span class='sub-text'>{sub_n} DAHİL</span>
                                 </div>
