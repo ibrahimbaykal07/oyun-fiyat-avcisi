@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import xml.etree.ElementTree as ET
+import streamlit.components.v1 as components
 from datetime import datetime
 
 # --- 1. AYARLAR ---
@@ -16,10 +17,10 @@ try:
 except ImportError:
     EPIC_AVAILABLE = False
 
-# --- CSS STİLİ (DETAY SAYFASI DÜZELTİLDİ) ---
+# --- CSS STİLİ ---
 st.markdown("""
 <style>
-    .block-container { padding-top: 3rem; }
+    .block-container { padding-top: 2rem; }
     
     /* Genel */
     .kur-kutusu { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #495057; font-size: 0.9em; text-align: center; border: 1px solid #dee2e6; }
@@ -31,20 +32,20 @@ st.markdown("""
     .vitrin-price { font-size: 1.1em; font-weight: bold; color: #28a745; margin: 2px 0; }
     .vitrin-date { font-size: 0.75em; color: #666; margin-bottom: 5px; font-style: italic; }
     
-    /* DETAY BAŞLIK (BEYAZ ZORLAMA) */
+    /* DETAY BAŞLIK (BEYAZ) */
     .detail-title { 
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         font-size: 2.5em; 
         font-weight: 800; 
         margin-bottom: 10px; 
-        color: #FFFFFF !important; /* Beyaz Renk */
+        color: #FFFFFF !important; 
         line-height: 1.2;
     }
     
-    /* Açıklama Kutusu (ŞEFFAF + BEYAZ YAZI) */
+    /* Açıklama Kutusu (Şeffaf + Beyaz Yazı) */
     .desc-box { 
         background-color: transparent; 
-        color: #FFFFFF !important; /* Beyaz Yazı */
+        color: #FFFFFF !important; 
         padding: 0; 
         border: none; 
         line-height: 1.6; 
@@ -80,7 +81,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. LOGOLAR (GAME PASS DÜZELTİLDİ) ---
+# --- 2. LOGOLAR (GARANTİ LİNKLER) ---
 STORE_LOGOS = {
     "Steam": "https://cdn.simpleicons.org/steam/171a21",
     "Epic Games": "https://cdn.simpleicons.org/epicgames/333333",
@@ -90,7 +91,7 @@ STORE_LOGOS = {
 }
 
 SUB_LOGOS = {
-    "Game Pass": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Xbox_Game_Pass_logo.svg/512px-Xbox_Game_Pass_logo.svg.png", # Çalışan PNG
+    "Game Pass": "https://cdn.simpleicons.org/xbox/107C10", # XBOX İKONU (ASLA KIRILMAZ)
     "EA Play": "https://cdn.simpleicons.org/ea/FF4747",
     "Ubisoft+": "https://cdn.simpleicons.org/ubisoft/0057ff"
 }
@@ -118,6 +119,17 @@ if 'home_limits' not in st.session_state: st.session_state.home_limits = {"p1": 
 
 # --- 4. YARDIMCI FONKSİYONLAR ---
 
+# --- SAYFAYI YUKARI KAYDIRMA (SCROLL TO TOP) ---
+def scroll_to_top():
+    # JavaScript Hack: Sayfayı en tepeye kaydırır
+    js = """
+    <script>
+        var body = window.parent.document.querySelector(".main");
+        body.scrollTop = 0;
+    </script>
+    """
+    components.html(js, height=0)
+
 @st.dialog("🎬 Medya Galerisi", width="large")
 def show_gallery_modal(media_list, start_idx=0):
     idx = st.slider("Medya Gezgini", 0, len(media_list)-1, start_idx, label_visibility="collapsed")
@@ -141,7 +153,6 @@ def get_dollar_rate():
     except: return 36.50
 
 def get_game_image(deal):
-    """GÜVENLİ DİKEY POSTER"""
     sid = deal.get('steamAppID')
     if sid and sid != "0": return f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{sid}/library_600x900.jpg"
     thumb = deal.get('thumb')
@@ -188,10 +199,10 @@ def get_steam_details_turkish(steam_id):
     try:
         url = f"http://store.steampowered.com/api/appdetails?appids={steam_id}&cc=tr&l=turkish"
         data = requests.get(url, timeout=3).json()
+        
         if str(steam_id) in data and data[str(steam_id)]['success']:
             game_data = data[str(steam_id)]['data']
             desc = game_data.get('short_description', 'Açıklama bulunamadı.')
-            
             media_list = []
             if 'movies' in game_data:
                 for m in game_data['movies']:
@@ -202,7 +213,6 @@ def get_steam_details_turkish(steam_id):
             if 'screenshots' in game_data:
                 for s in game_data['screenshots']:
                     media_list.append({"type": "image", "url": s['path_full'], "thumb": s['path_thumbnail']})
-            
             req_min = "Bilgi yok."
             req_rec = "Bilgi yok."
             if 'pc_requirements' in game_data and isinstance(game_data['pc_requirements'], dict):
@@ -222,6 +232,11 @@ def clean_game_title(title):
     for word in remove_words: cleaned = cleaned.replace(word, "")
     return cleaned.strip()
 
+def timestamp_to_date(ts):
+    if not ts: return ""
+    try: return datetime.fromtimestamp(ts).strftime('%d.%m.%Y')
+    except: return ""
+
 # --- 5. NAVİGASYON ---
 def go_home():
     st.session_state.active_page = 'home'
@@ -233,33 +248,29 @@ def go_category(name, sort, sale):
     st.session_state.selected_cat = {"name": name, "sort": sort, "sale": sale}
     st.session_state.active_page = 'category'
     st.session_state.page_number = 0
+    scroll_to_top() # Sayfa değişince yukarı kaydır
     st.rerun()
 
 def go_detail(game_data):
     st.session_state.selected_game = game_data
     st.session_state.active_page = 'detail'
+    scroll_to_top() # Sayfa değişince yukarı kaydır
     st.rerun()
 
 def set_page_num(num):
     st.session_state.page_number = num
+    scroll_to_top() # Sayfa değişince yukarı kaydır
     st.rerun()
 
 def increase_home_limit(key):
     st.session_state.home_limits[key] += 4
     st.rerun()
 
-def timestamp_to_date(ts):
-    if not ts: return ""
-    try: return datetime.fromtimestamp(ts).strftime('%d.%m.%Y')
-    except: return ""
-
-# --- 6. VERİ MOTORU (DÜZELTİLMİŞ SIRALAMA) ---
+# --- 6. VERİ MOTORU ---
 def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
     url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy={sort_by}&onSale={on_sale}&pageSize={page_size}&pageNumber={page}"
-    # Yeni çıkanlar için CheapShark bazen karışık veriyor, biz manuel sıralayacağız
     if sort_by == "Release":
-        url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy=Release&onSale={on_sale}&pageSize={page_size}&pageNumber={page}&desc=1" # desc=1 Eklendi
-    
+        url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy=Release&onSale={on_sale}&pageSize={page_size}&pageNumber={page}&desc=1"
     if sort_by == "Metacritic": url += "&upperPrice=60&metacritic=70"
     
     try:
@@ -284,10 +295,9 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
                 "discount": float(d['savings']),
                 "offers": [offer],
                 "store": s_name,
-                "releaseDate": d.get('releaseDate', 0) # Sıralama için
+                "releaseDate": d.get('releaseDate', 0)
             })
         
-        # MANUEL SIRALAMA (GARANTİ)
         if sort_by == "Release":
             results.sort(key=lambda x: x['releaseDate'], reverse=True)
             
@@ -295,6 +305,7 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
     except: return []
 
 # ================= ARAYÜZ BAŞLIYOR =================
+scroll_to_top() # Her render'da yukarı zorla (güvenlik için)
 dolar_kuru = get_dollar_rate()
 
 h1, h2, h3 = st.columns([1.5, 4, 1.5])
@@ -327,12 +338,10 @@ if st.session_state.active_page == 'home':
         ("🔥 Şuan İndirimde", "Savings", 1, "p2"),
         ("✨ Yeni Çıkanlar", "Release", 0, "p3")
     ]
-    
     for title, sort_key, sale_flag, limit_key in cats_config:
         st.subheader(title)
         current_limit = st.session_state.home_limits[limit_key]
         games = fetch_vitrin_deals(sort_key, on_sale=sale_flag, page_size=current_limit)
-        
         for i in range(0, len(games), 4):
             cols = st.columns(4)
             for j in range(4):
@@ -341,21 +350,15 @@ if st.session_state.active_page == 'home':
                     with cols[j]:
                         st.image(g['thumb'], use_container_width=True)
                         st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
-                        
-                        # Yeni çıkanlar için tarih göster
                         if sort_key == "Release" and g['releaseDate'] > 0:
-                            date_str = timestamp_to_date(g['releaseDate'])
-                            st.markdown(f"<div class='vitrin-date'>📅 {date_str}</div>", unsafe_allow_html=True)
-                        
+                            st.markdown(f"<div class='vitrin-date'>📅 {timestamp_to_date(g['releaseDate'])}</div>", unsafe_allow_html=True)
                         c_p, c_d = st.columns([2, 1])
                         c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
                         if st.button("İncele", key=f"btn_{g['dealID']}"): go_detail(g)
             st.write("")
-
         if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"):
             increase_home_limit(limit_key)
-            
         st.markdown("---")
 
 # ================= SAYFA 2: KATEGORİ =================
@@ -386,38 +389,25 @@ elif st.session_state.active_page == 'category':
                 if st.button(f"{p_num + 1}", key=f"pg_{p_num}", type=b_type): set_page_num(p_num)
     else: st.info("Bu sayfada oyun yok.")
 
-# ================= SAYFA 3: DETAY (DÜZELTİLDİ) =================
+# ================= SAYFA 3: DETAY =================
 elif st.session_state.active_page == 'detail':
     game = st.session_state.selected_game
     desc, media_list, req_min, req_rec = get_steam_details_turkish(game.get('steamAppID'))
-    
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
         st.image(game['thumb'], use_container_width=True)
-        # --- ŞIK ABONELİK ROZETİ ---
         sub_n, sub_l = check_subscription(game['title'])
         if sub_n:
             border_c = SUB_COLORS.get(sub_n, "#555")
-            st.markdown(f"""
-                <div class='sub-card' style='border-left-color: {border_c};'>
-                    <img src='{sub_l}' height='24'>
-                    <span class='sub-text'>{sub_n} DAHİL</span>
-                </div>
-            """, unsafe_allow_html=True)
-
+            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c};'><img src='{sub_l}' height='24'><span class='sub-text'>{sub_n} DAHİL</span></div>""", unsafe_allow_html=True)
     with c2:
-        # BAŞLIK BEYAZ RENK
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
         mc = get_meta_color(game['meta'])
         st.markdown(f"""<div style="margin-bottom:15px;"><span class='score-badge {mc}'>Metacritic: {game['meta']}</span><span class='score-badge user-blue'>Steam User: %{game['user']}</span></div>""", unsafe_allow_html=True)
-        
-        # AÇIKLAMA BEYAZ RENK (KUTUSUZ)
         if desc: st.markdown(f"<div class='desc-box'>{desc}</div>", unsafe_allow_html=True)
-        
         st.write("### 🏷️ Mağaza Fiyatları")
         offers = game.get('offers', [])
         if not offers: offers = [{"store": game['store'], "price": game['price'], "link": f"https://www.cheapshark.com/redirect?dealID={game['dealID']}"}]
-
         for off in offers:
             logo = STORE_LOGOS.get(off['store'])
             cl1, cl2, cl3 = st.columns([3, 2, 2])
@@ -427,9 +417,7 @@ elif st.session_state.active_page == 'detail':
             with cl2: st.markdown(f"<span class='price-big'>{off['price']} TL</span>", unsafe_allow_html=True)
             with cl3: st.link_button("Satın Al", off['link'], type="primary")
             st.divider()
-
     st.markdown("---")
-
     if media_list:
         st.subheader("🎬 Medya Galerisi (Fragman & Resim)")
         display_limit = 6
@@ -445,7 +433,6 @@ elif st.session_state.active_page == 'detail':
                         if st.button(f"{icon}", key=f"gal_{idx}", use_container_width=True):
                             show_gallery_modal(media_list, start_idx=idx)
             st.write("")
-    
     st.write("")
     if req_min != "Bilgi yok." or req_rec != "Bilgi yok.":
         st.subheader("💻 Sistem Gereksinimleri")
@@ -475,17 +462,15 @@ elif st.session_state.active_page == 'search':
                 if title not in grouped:
                     grouped[title] = {
                         "title": deal['title'],
-                        "thumb": get_game_image(deal), # Güvenli Resim
+                        "thumb": get_game_image(deal),
                         "meta": int(deal['metacriticScore']),
                         "user": int(deal['steamRatingPercent']),
                         "offers": [],
                         "steamAppID": deal.get('steamAppID')
                     }
-                
                 if deal.get('steamAppID') and not grouped[title].get('steamAppID'):
                     grouped[title]['steamAppID'] = deal.get('steamAppID')
                     grouped[title]['thumb'] = get_game_image(deal)
-
                 s_name = s_map[deal['storeID']]
                 p_usd = float(deal['salePrice'])
                 is_local_tl = False
@@ -506,7 +491,6 @@ elif st.session_state.active_page == 'search':
                 grouped[title]["offers"].append({
                     "store": s_name, "price": price_final, "link": final_link
                 })
-        
         if grouped:
             st.success(f"✅ {len(grouped)} oyun bulundu.")
             g_list = sorted(grouped.values(), key=lambda x: min(o['price'] for o in x['offers']))
@@ -516,18 +500,10 @@ elif st.session_state.active_page == 'search':
                     with c1: st.image(game['thumb'], use_container_width=True)
                     with c2: 
                         st.subheader(game['title'])
-                        
-                        # ARAMA SONUCUNDA DA ŞIK ABONELİK
                         sub_n, sub_l = check_subscription(game['title'])
                         if sub_n:
                             border_c = SUB_COLORS.get(sub_n, "#555")
-                            st.markdown(f"""
-                                <div class='sub-card' style='border-left-color: {border_c}; margin-top:0;'>
-                                    <img src='{sub_l}' height='20'>
-                                    <span class='sub-text'>{sub_n} DAHİL</span>
-                                </div>
-                            """, unsafe_allow_html=True)
-                        
+                            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c}; margin-top:0;'><img src='{sub_l}' height='20'><span class='sub-text'>{sub_n} DAHİL</span></div>""", unsafe_allow_html=True)
                         st.write("")
                         if game['meta']>0: 
                             mc=get_meta_color(game['meta'])
