@@ -42,7 +42,7 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* Açıklama Kutusu (Şeffaf + Beyaz Yazı) */
+    /* Açıklama Kutusu */
     .desc-box { 
         background-color: transparent; 
         color: #FFFFFF !important; 
@@ -66,8 +66,7 @@ st.markdown("""
         color: white;
         font-family: sans-serif;
     }
-    /* Metin boyutu ve hizalaması logoya göre ayarlandı */
-    .sub-text { font-weight: bold; font-size: 1.1em; margin-left: 12px; letter-spacing: 1px; }
+    .sub-text { font-weight: bold; font-size: 0.9em; margin-left: 10px; letter-spacing: 0.5px; }
     
     /* Diğerleri */
     .req-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; font-size: 0.9em; height: 100%; }
@@ -82,7 +81,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. LOGOLAR (YENİ RENKLİ SVG) ---
+# --- 2. LOGOLAR ---
 STORE_LOGOS = {
     "Steam": "https://cdn.simpleicons.org/steam/171a21",
     "Epic Games": "https://cdn.simpleicons.org/epicgames/333333",
@@ -92,8 +91,7 @@ STORE_LOGOS = {
 }
 
 SUB_LOGOS = {
-    # YENİ RENKLİ SVG LOGO
-    "Game Pass": "https://upload.wikimedia.org/wikipedia/commons/4/46/Xbox_Game_Pass_2020_logo_-_alternative_version_%28colored%29.svg",
+    "Game Pass": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Xbox_Game_Pass_logo.svg/512px-Xbox_Game_Pass_logo.svg.png",
     "EA Play": "https://cdn.simpleicons.org/ea/FF4747",
     "Ubisoft+": "https://cdn.simpleicons.org/ubisoft/0057ff"
 }
@@ -121,7 +119,23 @@ if 'home_limits' not in st.session_state: st.session_state.home_limits = {"p1": 
 
 # --- 4. YARDIMCI FONKSİYONLAR ---
 
-# --- SAYFAYI YUKARI KAYDIRMA (SCROLL TO TOP) ---
+# --- SIRALAMA PUANI HESAPLAYICI (YENİ) ---
+def calculate_sort_score(game_title, search_term):
+    title_lower = game_title.lower()
+    search_lower = search_term.lower()
+    
+    # 0: Tam Eşleşme (En Üst)
+    if title_lower == search_lower:
+        return 0
+    # 1: Ana Oyun (DLC kelimeleri içermeyen)
+    if not any(x in title_lower for x in ["dlc", "pack", "soundtrack", "expansion", "bundle", "season pass", "coin", "credit"]):
+        return 1
+    # 2: Özel Sürümler (Gold, Deluxe, Ultimate)
+    if any(x in title_lower for x in ["edition", "deluxe", "gold", "ultimate", "goty"]):
+        return 2
+    # 3: DLC ve Ekstralar (En Alt)
+    return 3
+
 def scroll_to_top():
     js = """
     <script>
@@ -399,7 +413,6 @@ elif st.session_state.active_page == 'detail':
         sub_n, sub_l = check_subscription(game['title'])
         if sub_n:
             border_c = SUB_COLORS.get(sub_n, "#555")
-            # SADECE "DAHİL" YAZISI
             st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c};'><img src='{sub_l}' height='30'><span class='sub-text'>DAHİL</span></div>""", unsafe_allow_html=True)
     with c2:
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
@@ -447,7 +460,7 @@ elif st.session_state.active_page == 'detail':
             if req_rec: st.markdown(req_rec, unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-# ================= SAYFA 4: ARAMA =================
+# ================= SAYFA 4: ARAMA (AKILLI SIRALAMA) =================
 elif st.session_state.active_page == 'search':
     term = st.session_state.search_term
     st.info(f"🔎 '{term}' aranıyor...")
@@ -461,13 +474,17 @@ elif st.session_state.active_page == 'search':
             if deal['storeID'] in s_map:
                 title = clean_game_title(deal['title'])
                 if title not in grouped:
+                    # PUANLAMA (EN ÖNEMLİ KISIM)
+                    sort_score = calculate_sort_score(title, corrected)
+                    
                     grouped[title] = {
                         "title": deal['title'],
                         "thumb": get_game_image(deal),
                         "meta": int(deal['metacriticScore']),
                         "user": int(deal['steamRatingPercent']),
                         "offers": [],
-                        "steamAppID": deal.get('steamAppID')
+                        "steamAppID": deal.get('steamAppID'),
+                        "sort_score": sort_score # Sıralama için eklendi
                     }
                 if deal.get('steamAppID') and not grouped[title].get('steamAppID'):
                     grouped[title]['steamAppID'] = deal.get('steamAppID')
@@ -492,9 +509,13 @@ elif st.session_state.active_page == 'search':
                 grouped[title]["offers"].append({
                     "store": s_name, "price": price_final, "link": final_link
                 })
+        
         if grouped:
             st.success(f"✅ {len(grouped)} oyun bulundu.")
-            g_list = sorted(grouped.values(), key=lambda x: min(o['price'] for o in x['offers']))
+            
+            # SIRALAMA: ÖNCE PUAN (0 En iyi), SONRA EN DÜŞÜK FİYAT
+            g_list = sorted(grouped.values(), key=lambda x: (x['sort_score'], min(o['price'] for o in x['offers'])))
+            
             for game in g_list:
                 with st.container():
                     c1, c2, c3 = st.columns([1.5, 2.5, 3])
@@ -504,7 +525,6 @@ elif st.session_state.active_page == 'search':
                         sub_n, sub_l = check_subscription(game['title'])
                         if sub_n:
                             border_c = SUB_COLORS.get(sub_n, "#555")
-                            # SADECE "DAHİL" YAZISI
                             st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c}; margin-top:0;'><img src='{sub_l}' height='24'><span class='sub-text'>DAHİL</span></div>""", unsafe_allow_html=True)
                         st.write("")
                         if game['meta']>0: 
