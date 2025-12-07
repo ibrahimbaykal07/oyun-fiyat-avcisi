@@ -12,7 +12,7 @@ try:
 except ImportError:
     EPIC_AVAILABLE = False
 
-# --- CSS STİLİ ---
+# --- CSS STİLİ (DİKEY POSTER & RENK UYUMU) ---
 st.markdown("""
 <style>
     .block-container { padding-top: 3rem; }
@@ -20,23 +20,26 @@ st.markdown("""
     /* Genel */
     .kur-kutusu { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #495057; font-size: 0.9em; text-align: center; border: 1px solid #dee2e6; }
     
-    /* Vitrin */
-    div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 16/9; object-fit: cover; }
+    /* Vitrin Resimleri - DİKEY POSTER (2/3 Oranı) */
+    div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 2/3; object-fit: cover; }
+    
     .vitrin-title { font-size: 0.9em; font-weight: bold; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
     .vitrin-price { font-size: 1.1em; font-weight: bold; color: #28a745; margin: 2px 0; }
     
-    /* DETAY SAYFASI BAŞLIK (DÜZELTİLDİ) */
+    /* DETAY BAŞLIK RENK UYUMU */
     .detail-title { 
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         font-size: 2.5em; 
         font-weight: 800; 
         margin-bottom: 10px; 
-        color: #000000 !important; /* Rengi Siyah Zorla */
+        color: #212529 !important; /* Açıklama metniyle aynı renk */
         line-height: 1.2;
-        display: block;
     }
     
-    .detail-desc { font-size: 1.05em; color: #444; margin-bottom: 20px; line-height: 1.6; }
+    /* Açıklama Kutusu */
+    .desc-box { background-color: #f8f9fa; color: #212529; padding: 20px; border-radius: 10px; border: 1px solid #e9ecef; line-height: 1.6; font-size: 1.05em; margin-bottom: 20px; }
+    
+    /* Diğerleri */
     .req-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; font-size: 0.9em; height: 100%; }
     .req-title { font-weight: bold; margin-bottom: 10px; color: #333; font-size: 1.1em; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
     .price-big { font-size: 1.2em; font-weight: bold; color: #28a745; }
@@ -77,48 +80,34 @@ if 'selected_cat' not in st.session_state: st.session_state.selected_cat = None
 if 'selected_game' not in st.session_state: st.session_state.selected_game = None
 if 'search_term' not in st.session_state: st.session_state.search_term = ""
 if 'gallery_idx' not in st.session_state: st.session_state.gallery_idx = 0
+# Vitrin limiti için state
+if 'home_limits' not in st.session_state: st.session_state.home_limits = {"p1": 4, "p2": 4, "p3": 4}
 
 # --- 4. YARDIMCI FONKSİYONLAR ---
 
-# --- GELİŞMİŞ GALERİ MODALI ---
+# --- YENİ NESİL GALERİ MODALI (SLIDER İLE NAVİGASYON) ---
 @st.dialog("🎬 Medya Galerisi", width="large")
-def show_gallery_modal(media_list):
-    # İndeks Sınırlarını Kontrol Et
-    idx = st.session_state.gallery_idx
-    if idx >= len(media_list): idx = 0
-    if idx < 0: idx = len(media_list) - 1
-    st.session_state.gallery_idx = idx # State'i güncelle
+def show_gallery_modal(media_list, start_idx=0):
+    # Slider kullanarak navigasyon (Takılmayı önler)
+    idx = st.slider("Medya Gezgini", 0, len(media_list)-1, start_idx, label_visibility="collapsed")
     
     current_item = media_list[idx]
     
-    # --- NAVİGASYON (ÜSTTE) ---
-    c1, c2, c3 = st.columns([1, 4, 1])
-    with c1:
-        if st.button("⬅️ Geri", key="modal_prev"):
-            st.session_state.gallery_idx -= 1
-            st.rerun()
-    with c3:
-        if st.button("İleri ➡️", key="modal_next"):
-            st.session_state.gallery_idx += 1
-            st.rerun()
-            
     st.write("") # Boşluk
 
-    # --- İÇERİK ---
+    # İÇERİK GÖSTERİMİ
     if current_item['type'] == 'video':
-        # HTML5 Video Oynatıcı (Daha güvenilir Embed)
-        video_html = f"""
-            <video width="100%" controls autoplay name="media">
-                <source src="{current_item['url']}" type="video/mp4">
-                Tarayıcınız video etiketini desteklemiyor.
-            </video>
-        """
-        st.markdown(video_html, unsafe_allow_html=True)
+        # Streamlit native video oynatıcı (Daha stabil)
+        st.video(current_item['url'], autoplay=True)
         st.caption(f"🎥 {current_item.get('name', 'Fragman')}")
         
     else:
+        # Resimler için aspect ratio'yu serbest bırakıyoruz ki tam görünsün
+        st.markdown("""<style>div[data-testid="stImage"] img { aspect-ratio: auto !important; }</style>""", unsafe_allow_html=True)
         st.image(current_item['url'], use_container_width=True)
         st.caption(f"📷 Görsel {idx + 1} / {len(media_list)}")
+        
+    st.markdown(f"<div style='text-align:center; color:#888; font-size:0.8em;'>Diğer medyaya geçmek için yukarıdaki kaydırıcıyı kullanın.</div>", unsafe_allow_html=True)
 
 
 def get_dollar_rate():
@@ -130,9 +119,13 @@ def get_dollar_rate():
     except: return 36.50
 
 def get_game_image(deal):
+    """GÜVENLİ DİKEY POSTER SEÇİCİ"""
     sid = deal.get('steamAppID')
-    if sid and sid != "0": return f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{sid}/library_600x900.jpg"
-    return deal.get('thumb').replace("capsule_sm_120", "header")
+    # En güvenilir ve kaliteli kaynak: Steam Library Poster (600x900)
+    if sid and sid != "0": 
+        return f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{sid}/library_600x900.jpg"
+    # Yedek: CheapShark'ın sağladığı thumbnail (Kırık olma ihtimali daha yüksek ama mecbur)
+    return deal.get('thumb')
 
 def get_meta_color(score):
     if score >= 75: return "meta-green"
@@ -169,8 +162,7 @@ def get_epic_price_local(game_name):
     return None, None, None
 
 def get_steam_details_turkish(steam_id):
-    """Steam Detaylarını Çeker (Fixli)"""
-    empty_return = (None, [], None, None, [])
+    empty_return = (None, [], None, None)
     if not steam_id or str(steam_id) == "0": return empty_return
     try:
         url = f"http://store.steampowered.com/api/appdetails?appids={steam_id}&cc=tr&l=turkish"
@@ -180,31 +172,18 @@ def get_steam_details_turkish(steam_id):
             game_data = data[str(steam_id)]['data']
             desc = game_data.get('short_description', 'Açıklama bulunamadı.')
             
-            # Medya Listesi
             media_list = []
-            
-            # 1. Videolar
+            # Videolar
             if 'movies' in game_data:
                 for m in game_data['movies']:
-                    # En iyi MP4'ü bul
                     mp4_url = m.get('mp4', {}).get('max')
                     if mp4_url:
-                        media_list.append({
-                            "type": "video",
-                            "url": mp4_url,
-                            "thumb": m.get('thumbnail'),
-                            "name": m.get('name', 'Fragman')
-                        })
-                        if len(media_list) >= 2: break # 2 Video Yeterli
-
-            # 2. Resimler
+                        media_list.append({"type": "video", "url": mp4_url, "thumb": m.get('thumbnail'), "name": m.get('name', 'Fragman')})
+                        if len(media_list) >= 2: break
+            # Resimler
             if 'screenshots' in game_data:
                 for s in game_data['screenshots']:
-                    media_list.append({
-                        "type": "image",
-                        "url": s['path_full'],
-                        "thumb": s['path_thumbnail']
-                    })
+                    media_list.append({"type": "image", "url": s['path_full'], "thumb": s['path_thumbnail']})
             
             req_min = "Bilgi yok."
             req_rec = "Bilgi yok."
@@ -212,7 +191,7 @@ def get_steam_details_turkish(steam_id):
                 req_min = game_data['pc_requirements'].get('minimum', 'Belirtilmemiş.')
                 req_rec = game_data['pc_requirements'].get('recommended', 'Belirtilmemiş.')
             
-            return desc, media_list, req_min, req_rec, media_list # media_list'i 2 kere döndürdüm uyumluluk için
+            return desc, media_list, req_min, req_rec
     except: pass
     return empty_return
 
@@ -230,6 +209,7 @@ def clean_game_title(title):
 def go_home():
     st.session_state.active_page = 'home'
     st.session_state.page_number = 0
+    st.session_state.home_limits = {"p1": 4, "p2": 4, "p3": 4} # Limitleri sıfırla
     st.rerun()
 
 def go_category(name, sort, sale):
@@ -241,16 +221,15 @@ def go_category(name, sort, sale):
 def go_detail(game_data):
     st.session_state.selected_game = game_data
     st.session_state.active_page = 'detail'
-    st.session_state.gallery_idx = 0 
     st.rerun()
 
 def set_page_num(num):
     st.session_state.page_number = num
     st.rerun()
 
-def open_gallery_at_index(idx, media_list):
-    st.session_state.gallery_idx = idx
-    show_gallery_modal(media_list)
+def increase_home_limit(key):
+    st.session_state.home_limits[key] += 4
+    st.rerun()
 
 # --- 6. VERİ MOTORU ---
 def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
@@ -262,13 +241,11 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
         for d in data:
             s_name = "Steam" if d['storeID'] == "1" else "Epic Games"
             price_tl = int(float(d['salePrice']) * dolar_kuru)
-            
             offer = {
                 "store": s_name, "price": price_tl, 
                 "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}",
                 "discount": float(d['savings'])
             }
-            
             results.append({
                 "title": d['title'],
                 "thumb": get_game_image(d),
@@ -310,21 +287,40 @@ if s_btn and s_val:
     st.session_state.active_page = 'search'
     st.rerun()
 
-# ================= SAYFA 1: ANA SAYFA =================
+# ================= SAYFA 1: ANA SAYFA (DAHA FAZLA BUTONLU) =================
 if st.session_state.active_page == 'home':
-    cats = [("🏆 En Popüler Başyapıtlar", "Metacritic", 0), ("🔥 Şuan İndirimde", "Savings", 1), ("✨ Yeni Çıkanlar", "Release", 0)]
-    for title, sort_key, sale_flag in cats:
+    # Kategori konfigürasyonu: Başlık, Sort Key, Sale Flag, Limit Key
+    cats_config = [
+        ("🏆 En Popüler Başyapıtlar", "Metacritic", 0, "p1"),
+        ("🔥 Şuan İndirimde", "Savings", 1, "p2"),
+        ("✨ Yeni Çıkanlar", "Release", 0, "p3")
+    ]
+    
+    for title, sort_key, sale_flag, limit_key in cats_config:
         st.subheader(title)
-        games = fetch_vitrin_deals(sort_key, on_sale=sale_flag, page_size=4)
-        cols = st.columns(4)
-        for i, g in enumerate(games):
-            with cols[i]:
-                st.image(g['thumb'], use_container_width=True)
-                st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
-                c_p, c_d = st.columns([2, 1])
-                c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
-                if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
-                if st.button("İncele", key=f"btn_{g['dealID']}"): go_detail(g)
+        # State'teki limite göre çek
+        current_limit = st.session_state.home_limits[limit_key]
+        games = fetch_vitrin_deals(sort_key, on_sale=sale_flag, page_size=current_limit)
+        
+        # Grid şeklinde göster
+        for i in range(0, len(games), 4):
+            cols = st.columns(4)
+            for j in range(4):
+                if i+j < len(games):
+                    g = games[i+j]
+                    with cols[j]:
+                        st.image(g['thumb'], use_container_width=True)
+                        st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
+                        c_p, c_d = st.columns([2, 1])
+                        c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
+                        if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
+                        if st.button("İncele", key=f"btn_{g['dealID']}"): go_detail(g)
+            st.write("") # Satır boşluğu
+
+        # DAHA FAZLA GÖSTER BUTONU
+        if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"):
+            increase_home_limit(limit_key)
+            
         st.markdown("---")
 
 # ================= SAYFA 2: KATEGORİ =================
@@ -355,12 +351,10 @@ elif st.session_state.active_page == 'category':
                 if st.button(f"{p_num + 1}", key=f"pg_{p_num}", type=b_type): set_page_num(p_num)
     else: st.info("Bu sayfada oyun yok.")
 
-# ================= SAYFA 3: DETAY (GÜNCELLENDİ) =================
+# ================= SAYFA 3: DETAY (KUSURSUZ GALERİ) =================
 elif st.session_state.active_page == 'detail':
     game = st.session_state.selected_game
-    
-    # Verileri Çek
-    desc, media_list, req_min, req_rec, _ = get_steam_details_turkish(game.get('steamAppID'))
+    desc, media_list, req_min, req_rec = get_steam_details_turkish(game.get('steamAppID'))
     
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
@@ -370,9 +364,7 @@ elif st.session_state.active_page == 'detail':
             st.markdown(f"<div style='margin-top:10px; padding:10px; background:#e9ecef; border-radius:8px; display:flex; align-items:center;'><img src='{sub_l}' height='25' style='margin-right:10px;'><span style='font-weight:bold; color:#333;'>{sub_n} Kütüphanesinde Mevcut!</span></div>", unsafe_allow_html=True)
 
     with c2:
-        # BAŞLIK (CSS İLE ZORLANDI)
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
-        
         mc = get_meta_color(game['meta'])
         st.markdown(f"""<div style="margin-bottom:15px;"><span class='score-badge {mc}'>Metacritic: {game['meta']}</span><span class='score-badge user-blue'>Steam User: %{game['user']}</span></div>""", unsafe_allow_html=True)
         
@@ -394,26 +386,24 @@ elif st.session_state.active_page == 'detail':
 
     st.markdown("---")
 
-    # --- MEDYA GALERİSİ (Grid) ---
+    # --- YENİ NESİL MEDYA GALERİSİ ---
     if media_list:
         st.subheader("🎬 Medya Galerisi (Fragman & Resim)")
-        
-        # 6'lı Grid
-        for i in range(0, min(len(media_list), 6), 3):
+        display_limit = 6
+        for i in range(0, min(len(media_list), display_limit), 3):
             cols = st.columns(3)
             for j in range(3):
                 idx = i + j
                 if idx < len(media_list):
                     item = media_list[idx]
                     with cols[j]:
-                        # Küçük Resim
+                        # Küçük Resim (Thumbnail)
                         st.image(item['thumb'], use_container_width=True)
-                        
-                        # Buton İkonu (Video/Resim)
+                        # İkon
                         icon = "▶️ Oynat" if item['type'] == 'video' else "🔍 Büyüt"
-                        
+                        # Tıklayınca Slider Modalı Aç
                         if st.button(f"{icon}", key=f"gal_{idx}", use_container_width=True):
-                            open_gallery_at_index(idx, media_list)
+                            show_gallery_modal(media_list, start_idx=idx)
             st.write("")
     
     st.write("")
