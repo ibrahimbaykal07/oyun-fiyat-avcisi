@@ -10,26 +10,6 @@ st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout=
 # Yedek Resim
 PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
 
-# --- 2. GÖMÜLÜ LOGOLAR (BASE64 - ASLA KIRILMAZ) ---
-# Bu kodlar resim dosyasıdır. Link değildir, bozulmaz.
-ICON_GAMEPASS = "data:image/png;base64,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"
-ICON_EA = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0ZGODU1NSI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTMuNSA3aC0zLjV2Mi41aDN2MS41aC0zVjE2aDN2MS41aC00LjVWOGg0LjV6bS02IDBoLTMuNXY4aDQuNXYtMS41aC0zdi0yLjVoM3YtMS41aC0zVjkuNWgzLjV6Ii8+PC9zdmc+"
-ICON_UBI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwOTlGRiI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMTcuNWMtMy4wMyAwLTUuNS0yLjQ3LTUuNS01LjVTOC45NyA5IDEyIDlzNS41IDIuNDcgNS41IDUuNS0yLjQ3IDUuNS01LjUgNS41em0wLTljLTEuOTMgMC0zLjUgMS41Ny0zLjUgMy41UzEwLjA3IDE1IDEyIDE1czMuNS0xLjU3IDMuNS0zLjUtMS41Ny0zLjUtMy41LTMuNXoiLz48L3N2Zz4="
-
-SUB_LOGOS = {
-    "Game Pass": ICON_GAMEPASS,
-    "EA Play": ICON_EA,
-    "EA Play Pro": ICON_EA,
-    "Ubisoft+": ICON_UBI
-}
-
-SUB_COLORS = {
-    "Game Pass": "#107C10",
-    "EA Play": "#FF4747",
-    "EA Play Pro": "#FFD700",
-    "Ubisoft+": "#0099FF"
-}
-
 # Epic Store Kütüphanesi
 try:
     from epicstore_api import EpicGamesStoreAPI
@@ -45,13 +25,14 @@ st.markdown("""
     /* Genel */
     .kur-kutusu { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #495057; font-size: 0.9em; text-align: center; border: 1px solid #dee2e6; }
     
-    /* Vitrin */
+    /* Vitrin Resimleri */
     div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 2/3; object-fit: cover; }
+    
     .vitrin-title { font-size: 0.9em; font-weight: bold; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
     .vitrin-price { font-size: 1.1em; font-weight: bold; color: #28a745; margin: 2px 0; }
     .vitrin-date { font-size: 0.75em; color: #666; margin-bottom: 5px; font-style: italic; }
     
-    /* Detay */
+    /* DETAY BAŞLIK */
     .detail-title { 
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         font-size: 2.5em; 
@@ -60,6 +41,8 @@ st.markdown("""
         color: #FFFFFF !important; 
         line-height: 1.2;
     }
+    
+    /* Açıklama Kutusu */
     .desc-box { 
         background-color: transparent; 
         color: #FFFFFF !important; 
@@ -70,23 +53,44 @@ st.markdown("""
         margin-bottom: 20px; 
     }
     
-    /* Abonelik Kartı */
-    .sub-card {
-        display: flex;
-        align-items: center;
-        background: linear-gradient(90deg, #1c1c1c, #2a2a2a);
-        border-left: 5px solid #555;
-        padding: 10px 15px;
-        border-radius: 0 8px 8px 0;
-        margin-top: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        color: white;
+    /* --- YENİ ABONELİK ROZET TASARIMLARI (LOGOSUZ) --- */
+    .badge-container {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
         font-family: sans-serif;
-        width: fit-content;
+        font-weight: 800;
+        font-size: 0.85em;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin-top: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
-    .sub-icon { width: 24px; height: 24px; margin-right: 10px; }
-    .sub-text { font-weight: bold; font-size: 0.9em; letter-spacing: 0.5px; text-transform: uppercase; }
     
+    .badge-gamepass {
+        background-color: #107C10; /* Xbox Yeşili */
+        color: white;
+        border: 1px solid #0e6f0e;
+    }
+    
+    .badge-eapro {
+        background: linear-gradient(135deg, #ff8c00, #ff0080); /* Pro için özel gradient */
+        color: white;
+        border: 1px solid #e67e00;
+    }
+    
+    .badge-ea {
+        background-color: #FF4747; /* EA Kırmızısı */
+        color: white;
+        border: 1px solid #e03e3e;
+    }
+    
+    .badge-ubi {
+        background-color: #0099FF; /* Ubisoft Mavisi */
+        color: white;
+        border: 1px solid #0088e0;
+    }
+
     /* Diğerleri */
     .req-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; font-size: 0.9em; height: 100%; }
     .req-title { font-weight: bold; margin-bottom: 10px; color: #333; font-size: 1.1em; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
@@ -100,7 +104,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. VERİTABANI ---
+# --- 2. LOGOLAR (Sadece Mağazalar İçin Kaldı) ---
 STORE_LOGOS = {
     "Steam": "https://cdn.simpleicons.org/steam/171a21",
     "Epic Games": "https://cdn.simpleicons.org/epicgames/333333",
@@ -109,14 +113,37 @@ STORE_LOGOS = {
     "GOG": "https://cdn.simpleicons.org/gogdotcom/893CE7"
 }
 
-SUBSCRIPTIONS = {
-    "Game Pass": ["call of duty", "black ops 6", "diablo 4", "starfield", "forza", "halo", "minecraft", "lies of p", "palworld", "hellblade", "stalker 2", "indiana jones", "sea of thieves", "doom", "expedition 33", "fable", "gears 5", "atomic heart"],
-    "EA Play Pro": ["fc 25", "f1 24", "madden nfl 25", "star wars jedi: survivor", "immortals of aveum", "wild hearts", "dead space remake"],
-    "EA Play": ["fc 24", "fc 25", "fifa", "battlefield", "f1 23", "madden", "star wars jedi", "sims 4", "titanfall", "mass effect", "it takes two", "need for speed", "dead space", "crysis", "apex legends", "skate"],
-    "Ubisoft+": ["assassin's creed", "mirage", "shadows", "avatar", "far cry", "prince of persia", "the crew", "rainbow six", "skull and bones", "watch dogs", "division", "ghost recon"]
+# Rozetler için CSS Sınıf Eşleştirmesi
+SUB_CLASSES = {
+    "Game Pass": "badge-gamepass",
+    "EA Play Pro": "badge-eapro",
+    "EA Play": "badge-ea",
+    "Ubisoft+": "badge-ubi"
 }
 
-# --- 5. SESSION STATE ---
+# --- 3. GÜNCELLENMİŞ ABONELİK VERİTABANI ---
+SUBSCRIPTIONS = {
+    "Game Pass": [
+        "call of duty", "black ops 6", "modern warfare iii", "diablo 4", "starfield", 
+        "forza", "halo", "minecraft", "lies of p", "palworld", "hellblade", "stalker 2", 
+        "indiana jones", "avowed", "sea of thieves", "doom", "gears 5", "atomic heart", 
+        "persona 3", "yakuza", "like a dragon", "wo long", "hollow knight"
+    ],
+    "EA Play Pro": [
+        "fc 26", "fc26", "fc 25", "fc25", "f1 24", "madden nfl 25", 
+        "star wars jedi: survivor", "immortals of aveum", "wild hearts", "dead space remake"
+    ],
+    "EA Play": [
+        "fc 24", "fifa", "battlefield", "madden", "star wars jedi", "sims 4", "titanfall", 
+        "mass effect", "it takes two", "need for speed", "dead space", "crysis", "apex", "skate", "f1 23"
+    ],
+    "Ubisoft+": [
+        "assassin's creed", "mirage", "shadows", "avatar", "far cry", "prince of persia", 
+        "the crew", "rainbow six", "skull and bones", "watch dogs", "division", "ghost recon", "anno", "for honor"
+    ]
+}
+
+# --- 4. SESSION STATE ---
 if 'active_page' not in st.session_state: st.session_state.active_page = 'home'
 if 'page_number' not in st.session_state: st.session_state.page_number = 0
 if 'selected_cat' not in st.session_state: st.session_state.selected_cat = None
@@ -125,7 +152,7 @@ if 'search_term' not in st.session_state: st.session_state.search_term = ""
 if 'gallery_idx' not in st.session_state: st.session_state.gallery_idx = 0
 if 'home_limits' not in st.session_state: st.session_state.home_limits = {"p1": 4, "p2": 4, "p3": 4}
 
-# --- 6. YARDIMCI FONKSİYONLAR ---
+# --- 5. YARDIMCI FONKSİYONLAR ---
 
 def scroll_to_top():
     components.html("""<script>window.parent.document.querySelector('.main').scrollTop = 0;</script>""", height=0)
@@ -165,15 +192,19 @@ def get_meta_color(score):
     else: return "meta-red"
 
 def check_subscription(game_name):
+    """Gelişmiş Abonelik Kontrolü"""
     s = game_name.lower().strip()
-    # 1. Pro Kontrolü
+    
+    # 1. EA Play Pro Kontrolü (Öncelikli)
     for g in SUBSCRIPTIONS["EA Play Pro"]:
-        if g in s: return "EA Play Pro", SUB_LOGOS["EA Play Pro"]
+        if g in s: return "EA Play Pro", SUB_CLASSES["EA Play Pro"]
+        
     # 2. Diğerleri
     for sub_name, games_list in SUBSCRIPTIONS.items():
         if sub_name == "EA Play Pro": continue
         for g in games_list:
-            if g in s: return sub_name, SUB_LOGOS[sub_name]
+            if g in s: return sub_name, SUB_CLASSES[sub_name]
+            
     return None, None
 
 def get_steam_turkey_price(sid):
@@ -227,7 +258,7 @@ def get_steam_details_turkish(steam_id):
     return empty_return
 
 def autocorrect_name(term):
-    d = {"gta": "Grand Theft Auto", "gta 5": "Grand Theft Auto V", "cod": "Call of Duty", "fc 25": "EA SPORTS FC 25", "mc": "Minecraft", "cp": "Cyberpunk 2077"}
+    d = {"gta": "Grand Theft Auto", "gta 5": "Grand Theft Auto V", "cod": "Call of Duty", "fc 25": "EA SPORTS FC 25", "fc 26": "EA SPORTS FC 26", "mc": "Minecraft", "cp": "Cyberpunk 2077"}
     return d.get(term.lower().strip(), term)
 
 def clean_game_title(title):
@@ -398,10 +429,13 @@ elif st.session_state.active_page == 'detail':
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
         st.image(game['thumb'], use_container_width=True)
-        sub_n, sub_l = check_subscription(game['title'])
+        # --- ABONELİK (YENİ SİSTEM) ---
+        sub_n, sub_cls = check_subscription(game['title'])
         if sub_n:
-            border_c = SUB_COLORS.get(sub_n, "#555")
-            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c};'><img src='{sub_l}' class='sub-icon'><span class='sub-text'>DAHİL</span></div>""", unsafe_allow_html=True)
+            st.markdown(f"""
+                <span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>
+            """, unsafe_allow_html=True)
+            
     with c2:
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
         mc = get_meta_color(game['meta'])
@@ -504,10 +538,12 @@ elif st.session_state.active_page == 'search':
                     with c1: st.image(game['thumb'], use_container_width=True)
                     with c2: 
                         st.subheader(game['title'])
-                        sub_n, sub_l = check_subscription(game['title'])
+                        # --- ABONELİK (YENİ SİSTEM) ---
+                        sub_n, sub_cls = check_subscription(game['title'])
                         if sub_n:
-                            border_c = SUB_COLORS.get(sub_n, "#555")
-                            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c}; margin-top:0;'><img src='{sub_l}' class='sub-icon'><span class='sub-text'>DAHİL</span></div>""", unsafe_allow_html=True)
+                            st.markdown(f"""
+                                <span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>
+                            """, unsafe_allow_html=True)
                         st.write("")
                         if game['meta']>0: 
                             mc=get_meta_color(game['meta'])
