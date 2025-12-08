@@ -10,29 +10,48 @@ st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout=
 # Yedek Resim
 PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
 
-# Epic Store Kütüphanesi
-try:
-    from epicstore_api import EpicGamesStoreAPI
-    EPIC_AVAILABLE = True
-except ImportError:
-    EPIC_AVAILABLE = False
+# --- 2. GÖMÜLÜ LOGOLAR (BASE64 - ASLA KIRILMAZ) ---
+# Bu kodlar resim dosyasıdır. Link değildir, bozulmaz.
+ICON_GAMEPASS = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAABmJLR0QA/wD/AP+gvaeTAAAHpElEQVRoge2ZbWxT1xXHf+f62Q87iZ04L0kIJCWtlJIOtGVTWxmD+rGq6zc2qAS1q1SfKtWqTZu0amo/bFq1atKmH9a2WhWqMvhRRa10TEpLw4OytDQJIZCEOGDi2E6c2I/r+52H4iQk3xsnIXxJz9u995xz/vf+z733nOsr8T/hIr9vA25WbgfkduV2QG5XblqQe9/9Y41S6iGl1DpN00o0TSsRQihN00oqpZRSSimllBJCqL/89Y+dNyXIX/76Z61KqacB3bZtVNM02raNpmm4XC6cTidOp7NojFJKKaXUv/7y504A7/3xL53FfS8aZH+/97BS6mnA8Pv9eL1efD4fPp8Pt9uN2+3G5XLhcDhQSiGlxDAMDMNASomUki+++OIy8O7v/3CyqP9Fg/z5b38yAH22bdPa2kpbWxttbW10dHALPp8Pt9t9Q4OUUmiahmEYSCmRUuLxePB4PCilEEJgGAYG8O7v/9hfNMi+fe91KaWeBvRQKCQOHz5MOBwmEAhgWRamaaJp2o0NApBlWdm2bV+3bp04fPgwlmVl4zRNQ9M0lFIEAgF8Ph9SSvR3fvfH/qJBAPr+/u91AE3TtOzAgQMEAgEGBwexLAtN07AsC8uybnqQUgpd1zN1dXX6+vXrRV9fH4ZhoGkaTqcTTdMwDAPDMPB6vfi8Poy3f180CMAA9HA4LA8dOkR/fz+WZRVC0DQNwzAoFfF4XJ9z587R2trK5cuXMU0TISSeogdBSommaYRCIQKBALZt4933+7+u+k8Kct97f6gFaJqmyYMHDxIOhzFNE8uysCwLwzCQUha1l1LyySefsHz5clpaWrAsC8MwcDgc2LaNZVmYpollWViWhWVZSCkRQrBixQqCQa/445/+vKpoEICmaVp28OBBQqEQlmVlQZRSNzcIoK+vj4aGBpqbmzEMg4qKCtasWcORI0fwer2YponT6cQwDCzLwrIsdF3H6/USCoUwTfONIkEAhm3b8tChQwSDQSzLyobouo7D4cCyrKJ2Ukq6u7tZvHgxixYtAuDgwYMsXbqU6urqbJyu6xiGgWVZSCnx+/0EAgFM08R7f//H/qJBAPq2bdt04MABBgYGMAwDIdA0DafTiZQS0zSL2g3DIBwO09DQgMPhwLIsuru7qaurw+12YxgGlmXB1VBD13U8Hg/BcIhgMIhhGHj3vfdH0SAADdu25aFDhwgGg1iWhWEY6LqOw+HAsiwMw8A0zaJ20zQZHh6mqamJYDCIlJLu7m6WLVuG1+vFMAwsy8K2bSzLQtM0PB4PgUCAYDCIaZp4f/eH40WD7Hv3D7UAw7ZtefDgQYLBIIZhoGkagUAAt9t9w4MopRgYGGDp0qV0dXWRTCbp7u6mubmZsrIyDMO4OkjXdbxeL8FgkGAwiGmaGG/v/33RIADdNM3s4cOHCQQCWJaFaZpIKSkrK7vhQZRSJBIJmpqa6OrqIpVK0dPTQ3NzM+Xl5RiGgWVZWJaFpmlIKSkrKyMYDBIMBrEsC+Ptf/x90SAADdM05aFDhwgGg1iWheFwYBgGbre7qL2UksHBQZqbm+nu7iaVStHd3U1zczPl5eUYhoFlWViWhRCCsrIygsEggUAASQnvvv/H40WDAAzTNOXBgwfp7+/HNE0Mw8DpdOL1eolGo0XtpZQMDAzQ3NxMV1cXqVSK7u5uFi5cSFlZGYZhoOs6lmVlQcrKyggGgwQCASzLwnj3D38sGuTf//rnDqA3DEMSDAaJRCJIKXE4HDidTrxeL1JKLMsqaieHh4dpaWmhvb2ddDrN4cOHaWlpwev1YhgGlmVhWRa6ruPxeAgEAoSjYUzTxHvnD38qGuT3f/xTJ9Bn27YIhULE43GklDidTrxeLx6PB9M0MU2zqN0wDPr6+li5ciV1dXUAHD16lJaWFrxeL4ZhYFkWlmWh6zper5dgMIhpmhBCvPXeH/uLBtm3770O4A3btunv7ycajSKlxOVy4fV68fl8SCkxDKNonGma9Pb20tjYyKpVqwDo6+ujubkZr9eLYRhYloVlWej/h2AwSCgUwrIsjHfe/6NfCLHnBrd9773XAXzHtm06ePAgkUgEKSVOpxOv14vP50PXdUzTLBpnmiY9PT00NjbS3t4OwNGjR1m+fDlerxfDMLAsC9u20XUdt9tNMHg1SMMw8N7Z98fios+I/f3ew8BbwJvxeJwTJ06QTCaRUuJ0OvF4PHi9XlzXF2WK2g3DoKenB4fDQX19PQCHDx+mubkZr9eLYRjYto1t2+i6jtfrJRgMEg6HMQzjDfr7vccX3SD73nqvBfgO8FZbWxtdXV2kUimklLhcLrxeLz6fD13XMU2zaJxpmvT09NDQ0EB7ezsAR48eZcWKFXi9XgzDwLZtbNtG13W8Xi/BYJBwOIxpmhivv/fH4qLPiP393sPAd4C3Tpw4QWtrK8lkEiklrut3wuPxoOs6pmnedIdhGHR3d+NwOGhoaADg8OHDLF++HK/Xi2EY2LaNbdu4XC68Xi/BYJBwOIxhGG+w790/Hl90gwD0ffve6wD+DLw1ODjIsWPHSKVSCCFwOp14vV58Ph+6rmOaZtE40zTp6emhoaGB9vZ2AI4ePcpTTz2F1+vFMAxs28a2bVwul7/Ybn8A+K//fSfcrtwOyO3K7YDcrtwOyO3K/wHFw9x42M/CTAAAAABJRU5ErkJggg=="
+ICON_EA = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0ZGODU1NSI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTMuNSA3aC0zLjV2Mi41aDN2MS41aC0zVjE2aDN2MS41aC00LjVWOGg0LjV6bS02IDBoLTMuNXY4aDQuNXYtMS41aC0zdi0yLjVoM3YtMS41aC0zVjkuNWgzLjV6Ii8+PC9zdmc+"
+ICON_UBI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwOTlGRiI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMTcuNWMtMy4wMyAwLTUuNS0yLjQ3LTUuNS01LjVTOC45NyA5IDEyIDlzNS41IDIuNDcgNS41IDUuNS0yLjQ3IDUuNS01LjUgNS41em0wLTljLTEuOTMgMC0zLjUgMS41Ny0zLjUgMy41UzEwLjA3IDE1IDEyIDE1czMuNS0xLjU3IDMuNS0zLjUtMS41Ny0zLjUtMy41LTMuNXoiLz48L3N2Zz4="
 
 # --- CSS STİLİ ---
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; }
+    
+    /* Genel */
     .kur-kutusu { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #495057; font-size: 0.9em; text-align: center; border: 1px solid #dee2e6; }
     
+    /* Vitrin */
     div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 2/3; object-fit: cover; }
-    
     .vitrin-title { font-size: 0.9em; font-weight: bold; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
     .vitrin-price { font-size: 1.1em; font-weight: bold; color: #28a745; margin: 2px 0; }
     .vitrin-date { font-size: 0.75em; color: #666; margin-bottom: 5px; font-style: italic; }
     
-    .detail-title { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 2.5em; font-weight: 800; margin-bottom: 10px; color: #FFFFFF !important; line-height: 1.2; }
-    .desc-box { background-color: transparent; color: #FFFFFF !important; padding: 0; border: none; line-height: 1.6; font-size: 1.05em; margin-bottom: 20px; }
+    /* DETAY BAŞLIK (BEYAZ) */
+    .detail-title { 
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 2.5em; 
+        font-weight: 800; 
+        margin-bottom: 10px; 
+        color: #FFFFFF !important; 
+        line-height: 1.2;
+    }
     
-    /* ABONELİK KARTI */
+    /* Açıklama Kutusu */
+    .desc-box { 
+        background-color: transparent; 
+        color: #FFFFFF !important; 
+        padding: 0; 
+        border: none; 
+        line-height: 1.6; 
+        font-size: 1.05em; 
+        margin-bottom: 20px; 
+    }
+    
+    /* Abonelik Kartı */
     .sub-card {
         display: flex;
         align-items: center;
@@ -45,8 +64,10 @@ st.markdown("""
         color: white;
         font-family: sans-serif;
     }
-    .sub-text { font-weight: bold; font-size: 0.9em; margin-left: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .sub-icon { width: 24px; height: 24px; margin-right: 10px; }
+    .sub-text { font-weight: bold; font-size: 0.9em; letter-spacing: 0.5px; text-transform: uppercase; }
     
+    /* Diğerleri */
     .req-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; font-size: 0.9em; height: 100%; }
     .req-title { font-weight: bold; margin-bottom: 10px; color: #333; font-size: 1.1em; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
     .price-big { font-size: 1.2em; font-weight: bold; color: #28a745; }
@@ -59,7 +80,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. LOGOLAR & RENKLER ---
+# --- 3. LOGOLAR VE RENKLER ---
 STORE_LOGOS = {
     "Steam": "https://cdn.simpleicons.org/steam/171a21",
     "Epic Games": "https://cdn.simpleicons.org/epicgames/333333",
@@ -68,58 +89,29 @@ STORE_LOGOS = {
     "GOG": "https://cdn.simpleicons.org/gogdotcom/893CE7"
 }
 
-# Abonelik Logoları
 SUB_LOGOS = {
-    "Game Pass": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Xbox_Game_Pass_2020_logo_-_alternative_version_%28colored%29.svg/512px-Xbox_Game_Pass_2020_logo_-_alternative_version_%28colored%29.svg.png",
-    "EA Play": "https://cdn.simpleicons.org/ea/FF4747", 
-    "EA Play Pro": "https://cdn.simpleicons.org/ea/FF4747", # Pro için de EA logosu kullanıyoruz ama rengi farklı olacak
-    "Ubisoft+": "https://cdn.simpleicons.org/ubisoft/0057ff"
+    "Game Pass": ICON_GAMEPASS,
+    "EA Play": ICON_EA,
+    "EA Play Pro": ICON_EA,
+    "Ubisoft+": ICON_UBI
 }
 
-# Abonelik Renk Kodları (Kartın sol çizgisi için)
 SUB_COLORS = {
-    "Game Pass": "#107C10",   # Yeşil
-    "EA Play": "#FF4747",     # Kırmızı
-    "EA Play Pro": "#FFD700", # Altın (Pro Farkı)
-    "Ubisoft+": "#0099FF"     # Mavi
+    "Game Pass": "#107C10",
+    "EA Play": "#FF4747",
+    "EA Play Pro": "#FFD700",
+    "Ubisoft+": "#0099FF"
 }
 
-# --- 3. VERİTABANI (SUBSCRIPTION DATABASE) ---
-# Burası oyunların hangi sistemde olduğunu tutar.
-# EA Play Pro'ya en yeni oyunları, Normal EA Play'e eskileri ekliyoruz.
+# --- 4. ABONELİK VERİTABANI ---
 SUBSCRIPTIONS = {
-    "Game Pass": [
-        "call of duty", "black ops 6", "modern warfare iii", "diablo 4", "starfield", 
-        "forza horizon 5", "forza motorsport", "halo infinite", "halo: the master chief collection",
-        "minecraft", "flight simulator", "lies of p", "palworld", "hellblade", 
-        "senua's saga", "stalker 2", "indiana jones", "avowed", "sea of thieves", 
-        "doom eternal", "gears 5", "atomic heart", "high on life", "persona 3 reload",
-        "yakuza", "like a dragon", "wo long", "hollow knight", "expedition 33", "fable",
-        "assassin's creed origins", "assassin's creed odyssey" # Ubisoft oyunları bazen GamePass'te de olur
-    ],
-    "EA Play Pro": [
-        "fc 25", "f1 24", "madden nfl 25", "star wars jedi: survivor", 
-        "immortals of aveum", "wild hearts", "dead space remake"
-    ],
-    "EA Play": [
-        "fc 24", "fifa 23", "fifa 22", "battlefield 2042", "battlefield v", "battlefield 1", 
-        "battlefield 4", "star wars jedi: fallen order", "star wars battlefront",
-        "the sims 4", "titanfall 2", "mass effect legendary edition", "dragon age",
-        "need for speed unbound", "need for speed heat", "it takes two", "a way out",
-        "mirrors edge", "crysis", "apex legends", "skate", "f1 23"
-    ],
-    "Ubisoft+": [
-        "assassin's creed mirage", "assassin's creed valhalla", "assassin's creed odyssey",
-        "assassin's creed origins", "assassin's creed shadows", "avatar: frontiers of pandora",
-        "prince of persia: the lost crown", "far cry 6", "far cry 5", "far cry new dawn",
-        "the crew motorfest", "the crew 2", "rainbow six siege", "rainbow six extraction",
-        "skull and bones", "riders republic", "watch dogs legion", "watch dogs 2",
-        "tom clancy's the division 2", "ghost recon breakpoint", "ghost recon wildlands",
-        "immortals fenyx rising", "for honor", "anno 1800", "monopoly"
-    ]
+    "Game Pass": ["call of duty", "black ops 6", "diablo 4", "starfield", "forza", "halo", "minecraft", "lies of p", "palworld", "hellblade", "stalker 2", "indiana jones", "sea of thieves", "doom", "expedition 33", "fable", "gears 5", "atomic heart"],
+    "EA Play Pro": ["fc 25", "f1 24", "madden nfl 25", "star wars jedi: survivor", "immortals of aveum", "wild hearts", "dead space remake"],
+    "EA Play": ["fc 24", "fc 25", "fifa", "battlefield", "f1 23", "madden", "star wars jedi", "sims 4", "titanfall", "mass effect", "it takes two", "need for speed", "dead space", "crysis", "apex legends", "skate"],
+    "Ubisoft+": ["assassin's creed", "mirage", "shadows", "avatar", "far cry", "prince of persia", "the crew", "rainbow six", "skull and bones", "watch dogs", "division", "ghost recon"]
 }
 
-# --- 4. SESSION STATE ---
+# --- 5. SESSION STATE ---
 if 'active_page' not in st.session_state: st.session_state.active_page = 'home'
 if 'page_number' not in st.session_state: st.session_state.page_number = 0
 if 'selected_cat' not in st.session_state: st.session_state.selected_cat = None
@@ -128,11 +120,19 @@ if 'search_term' not in st.session_state: st.session_state.search_term = ""
 if 'gallery_idx' not in st.session_state: st.session_state.gallery_idx = 0
 if 'home_limits' not in st.session_state: st.session_state.home_limits = {"p1": 4, "p2": 4, "p3": 4}
 
-# --- 5. YARDIMCI FONKSİYONLAR ---
+# --- 6. YARDIMCI FONKSİYONLAR ---
 
 def scroll_to_top():
-    js = """<script>var body = window.parent.document.querySelector(".main"); body.scrollTop = 0;</script>"""
-    components.html(js, height=0)
+    # JavaScript Hack: Sayfayı her seferinde en tepeye zorlar
+    components.html(
+        """
+            <script>
+                window.parent.document.querySelector('.main').scrollTop = 0;
+            </script>
+        """,
+        height=0,
+        width=0,
+    )
 
 @st.dialog("🎬 Medya Galerisi", width="large")
 def show_gallery_modal(media_list, start_idx=0):
@@ -169,19 +169,15 @@ def get_meta_color(score):
     else: return "meta-red"
 
 def check_subscription(game_name):
-    """Oyunun hangi abonelikte olduğunu kontrol eder. PRO önceliklidir."""
-    s = game_name.lower()
-    
-    # 1. Önce EA Play Pro kontrolü (Çünkü Pro, Normalden daha özeldir)
-    if any(x in s for x in SUBSCRIPTIONS["EA Play Pro"]):
-        return "EA Play Pro", SUB_LOGOS["EA Play Pro"]
-        
-    # 2. Sonra Diğerleri
+    s = game_name.lower().strip()
+    # 1. Pro Kontrolü
+    for g in SUBSCRIPTIONS["EA Play Pro"]:
+        if g in s: return "EA Play Pro", SUB_LOGOS["EA Play Pro"]
+    # 2. Diğerleri
     for sub_name, games_list in SUBSCRIPTIONS.items():
-        if sub_name == "EA Play Pro": continue # Zaten baktık
+        if sub_name == "EA Play Pro": continue
         for g in games_list:
-            if g in s:
-                return sub_name, SUB_LOGOS[sub_name]
+            if g in s: return sub_name, SUB_LOGOS[sub_name]
     return None, None
 
 def get_steam_turkey_price(sid):
@@ -257,11 +253,12 @@ def timestamp_to_date(ts):
     try: return datetime.fromtimestamp(ts).strftime('%d.%m.%Y')
     except: return ""
 
-# --- 6. NAVİGASYON ---
+# --- 7. NAVİGASYON ---
 def go_home():
     st.session_state.active_page = 'home'
     st.session_state.page_number = 0
     st.session_state.home_limits = {"p1": 4, "p2": 4, "p3": 4}
+    scroll_to_top()
     st.rerun()
 
 def go_category(name, sort, sale):
@@ -286,7 +283,7 @@ def increase_home_limit(key):
     st.session_state.home_limits[key] += 4
     st.rerun()
 
-# --- 7. VERİ MOTORU ---
+# --- 8. VERİ MOTORU ---
 def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
     url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy={sort_by}&onSale={on_sale}&pageSize={page_size}&pageNumber={page}"
     if sort_by == "Release":
@@ -398,18 +395,17 @@ elif st.session_state.active_page == 'category':
                 if st.button(f"{p_num + 1}", key=f"pg_{p_num}", type=b_type): set_page_num(p_num)
     else: st.info("Bu sayfada oyun yok.")
 
-# ================= SAYFA 3: DETAY (ABONELİK ÖNCELİKLİ) =================
+# ================= SAYFA 3: DETAY =================
 elif st.session_state.active_page == 'detail':
     game = st.session_state.selected_game
     desc, media_list, req_min, req_rec = get_steam_details_turkish(game.get('steamAppID'))
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
         st.image(game['thumb'], use_container_width=True)
-        # --- ABONELİK (RENKLİ & ŞIK) ---
         sub_n, sub_l = check_subscription(game['title'])
         if sub_n:
             border_c = SUB_COLORS.get(sub_n, "#555")
-            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c};'><img src='{sub_l}' height='30'><span class='sub-text'>DAHİL</span></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c};'><img src='{sub_l}' class='sub-icon'><span class='sub-text'>DAHİL</span></div>""", unsafe_allow_html=True)
     with c2:
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
         mc = get_meta_color(game['meta'])
@@ -515,7 +511,7 @@ elif st.session_state.active_page == 'search':
                         sub_n, sub_l = check_subscription(game['title'])
                         if sub_n:
                             border_c = SUB_COLORS.get(sub_n, "#555")
-                            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c}; margin-top:0;'><img src='{sub_l}' height='24'><span class='sub-text'>DAHİL</span></div>""", unsafe_allow_html=True)
+                            st.markdown(f"""<div class='sub-card' style='border-left-color: {border_c}; margin-top:0;'><img src='{sub_l}' class='sub-icon'><span class='sub-text'>DAHİL</span></div>""", unsafe_allow_html=True)
                         st.write("")
                         if game['meta']>0: 
                             mc=get_meta_color(game['meta'])
