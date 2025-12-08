@@ -21,39 +21,18 @@ except ImportError:
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; }
-    
-    /* Genel */
     .kur-kutusu { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #495057; font-size: 0.9em; text-align: center; border: 1px solid #dee2e6; }
     
-    /* Vitrin Resimleri */
     div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 2/3; object-fit: cover; }
     
     .vitrin-title { font-size: 0.9em; font-weight: bold; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
     .vitrin-price { font-size: 1.1em; font-weight: bold; color: #28a745; margin: 2px 0; }
     .vitrin-date { font-size: 0.75em; color: #666; margin-bottom: 5px; font-style: italic; }
     
-    /* DETAY BAŞLIK (BEYAZ) */
-    .detail-title { 
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-        font-size: 2.5em; 
-        font-weight: 800; 
-        margin-bottom: 10px; 
-        color: #FFFFFF !important; 
-        line-height: 1.2;
-    }
+    .detail-title { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 2.5em; font-weight: 800; margin-bottom: 10px; color: #FFFFFF !important; line-height: 1.2; }
+    .desc-box { background-color: transparent; color: #FFFFFF !important; padding: 0; border: none; line-height: 1.6; font-size: 1.05em; margin-bottom: 20px; }
     
-    /* Açıklama Kutusu */
-    .desc-box { 
-        background-color: transparent; 
-        color: #FFFFFF !important; 
-        padding: 0; 
-        border: none; 
-        line-height: 1.6; 
-        font-size: 1.05em; 
-        margin-bottom: 20px; 
-    }
-    
-    /* Abonelik Kartı */
+    /* ABONELİK KARTI */
     .sub-card {
         display: flex;
         align-items: center;
@@ -66,9 +45,8 @@ st.markdown("""
         color: white;
         font-family: sans-serif;
     }
-    .sub-text { font-weight: bold; font-size: 0.9em; margin-left: 10px; letter-spacing: 0.5px; }
+    .sub-text { font-weight: bold; font-size: 0.9em; margin-left: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
     
-    /* Diğerleri */
     .req-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; font-size: 0.9em; height: 100%; }
     .req-title { font-weight: bold; margin-bottom: 10px; color: #333; font-size: 1.1em; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
     .price-big { font-size: 1.2em; font-weight: bold; color: #28a745; }
@@ -81,7 +59,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. LOGOLAR ---
+# --- 2. LOGOLAR & RENKLER ---
 STORE_LOGOS = {
     "Steam": "https://cdn.simpleicons.org/steam/171a21",
     "Epic Games": "https://cdn.simpleicons.org/epicgames/333333",
@@ -90,25 +68,58 @@ STORE_LOGOS = {
     "GOG": "https://cdn.simpleicons.org/gogdotcom/893CE7"
 }
 
+# Abonelik Logoları
 SUB_LOGOS = {
-    "Game Pass": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Xbox_Game_Pass_logo.svg/512px-Xbox_Game_Pass_logo.svg.png",
-    "EA Play": "https://cdn.simpleicons.org/ea/FF4747",
+    "Game Pass": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Xbox_Game_Pass_2020_logo_-_alternative_version_%28colored%29.svg/512px-Xbox_Game_Pass_2020_logo_-_alternative_version_%28colored%29.svg.png",
+    "EA Play": "https://cdn.simpleicons.org/ea/FF4747", 
+    "EA Play Pro": "https://cdn.simpleicons.org/ea/FF4747", # Pro için de EA logosu kullanıyoruz ama rengi farklı olacak
     "Ubisoft+": "https://cdn.simpleicons.org/ubisoft/0057ff"
 }
 
+# Abonelik Renk Kodları (Kartın sol çizgisi için)
 SUB_COLORS = {
-    "Game Pass": "#107C10",
-    "EA Play": "#FF4747",
-    "Ubisoft+": "#0099FF"
+    "Game Pass": "#107C10",   # Yeşil
+    "EA Play": "#FF4747",     # Kırmızı
+    "EA Play Pro": "#FFD700", # Altın (Pro Farkı)
+    "Ubisoft+": "#0099FF"     # Mavi
 }
 
+# --- 3. VERİTABANI (SUBSCRIPTION DATABASE) ---
+# Burası oyunların hangi sistemde olduğunu tutar.
+# EA Play Pro'ya en yeni oyunları, Normal EA Play'e eskileri ekliyoruz.
 SUBSCRIPTIONS = {
-    "Game Pass": ["call of duty", "black ops 6", "diablo 4", "starfield", "forza", "halo", "minecraft", "lies of p", "palworld", "hellblade", "stalker 2", "indiana jones", "sea of thieves", "doom", "expedition 33", "fable", "gears 5", "atomic heart"],
-    "EA Play": ["fc 24", "fc 25", "fifa", "battlefield", "f1 23", "f1 24", "madden", "star wars jedi", "sims 4", "titanfall", "mass effect", "it takes two", "need for speed", "dead space"],
-    "Ubisoft+": ["assassin's creed", "mirage", "shadows", "avatar", "far cry", "prince of persia", "the crew", "rainbow six", "skull and bones", "watch dogs", "division", "ghost recon"]
+    "Game Pass": [
+        "call of duty", "black ops 6", "modern warfare iii", "diablo 4", "starfield", 
+        "forza horizon 5", "forza motorsport", "halo infinite", "halo: the master chief collection",
+        "minecraft", "flight simulator", "lies of p", "palworld", "hellblade", 
+        "senua's saga", "stalker 2", "indiana jones", "avowed", "sea of thieves", 
+        "doom eternal", "gears 5", "atomic heart", "high on life", "persona 3 reload",
+        "yakuza", "like a dragon", "wo long", "hollow knight", "expedition 33", "fable",
+        "assassin's creed origins", "assassin's creed odyssey" # Ubisoft oyunları bazen GamePass'te de olur
+    ],
+    "EA Play Pro": [
+        "fc 25", "f1 24", "madden nfl 25", "star wars jedi: survivor", 
+        "immortals of aveum", "wild hearts", "dead space remake"
+    ],
+    "EA Play": [
+        "fc 24", "fifa 23", "fifa 22", "battlefield 2042", "battlefield v", "battlefield 1", 
+        "battlefield 4", "star wars jedi: fallen order", "star wars battlefront",
+        "the sims 4", "titanfall 2", "mass effect legendary edition", "dragon age",
+        "need for speed unbound", "need for speed heat", "it takes two", "a way out",
+        "mirrors edge", "crysis", "apex legends", "skate", "f1 23"
+    ],
+    "Ubisoft+": [
+        "assassin's creed mirage", "assassin's creed valhalla", "assassin's creed odyssey",
+        "assassin's creed origins", "assassin's creed shadows", "avatar: frontiers of pandora",
+        "prince of persia: the lost crown", "far cry 6", "far cry 5", "far cry new dawn",
+        "the crew motorfest", "the crew 2", "rainbow six siege", "rainbow six extraction",
+        "skull and bones", "riders republic", "watch dogs legion", "watch dogs 2",
+        "tom clancy's the division 2", "ghost recon breakpoint", "ghost recon wildlands",
+        "immortals fenyx rising", "for honor", "anno 1800", "monopoly"
+    ]
 }
 
-# --- 3. SESSION STATE ---
+# --- 4. SESSION STATE ---
 if 'active_page' not in st.session_state: st.session_state.active_page = 'home'
 if 'page_number' not in st.session_state: st.session_state.page_number = 0
 if 'selected_cat' not in st.session_state: st.session_state.selected_cat = None
@@ -117,32 +128,10 @@ if 'search_term' not in st.session_state: st.session_state.search_term = ""
 if 'gallery_idx' not in st.session_state: st.session_state.gallery_idx = 0
 if 'home_limits' not in st.session_state: st.session_state.home_limits = {"p1": 4, "p2": 4, "p3": 4}
 
-# --- 4. YARDIMCI FONKSİYONLAR ---
-
-# --- SIRALAMA PUANI HESAPLAYICI (YENİ) ---
-def calculate_sort_score(game_title, search_term):
-    title_lower = game_title.lower()
-    search_lower = search_term.lower()
-    
-    # 0: Tam Eşleşme (En Üst)
-    if title_lower == search_lower:
-        return 0
-    # 1: Ana Oyun (DLC kelimeleri içermeyen)
-    if not any(x in title_lower for x in ["dlc", "pack", "soundtrack", "expansion", "bundle", "season pass", "coin", "credit"]):
-        return 1
-    # 2: Özel Sürümler (Gold, Deluxe, Ultimate)
-    if any(x in title_lower for x in ["edition", "deluxe", "gold", "ultimate", "goty"]):
-        return 2
-    # 3: DLC ve Ekstralar (En Alt)
-    return 3
+# --- 5. YARDIMCI FONKSİYONLAR ---
 
 def scroll_to_top():
-    js = """
-    <script>
-        var body = window.parent.document.querySelector(".main");
-        body.scrollTop = 0;
-    </script>
-    """
+    js = """<script>var body = window.parent.document.querySelector(".main"); body.scrollTop = 0;</script>"""
     components.html(js, height=0)
 
 @st.dialog("🎬 Medya Galerisi", width="large")
@@ -180,10 +169,19 @@ def get_meta_color(score):
     else: return "meta-red"
 
 def check_subscription(game_name):
+    """Oyunun hangi abonelikte olduğunu kontrol eder. PRO önceliklidir."""
     s = game_name.lower()
+    
+    # 1. Önce EA Play Pro kontrolü (Çünkü Pro, Normalden daha özeldir)
+    if any(x in s for x in SUBSCRIPTIONS["EA Play Pro"]):
+        return "EA Play Pro", SUB_LOGOS["EA Play Pro"]
+        
+    # 2. Sonra Diğerleri
     for sub_name, games_list in SUBSCRIPTIONS.items():
+        if sub_name == "EA Play Pro": continue # Zaten baktık
         for g in games_list:
-            if g in s: return sub_name, SUB_LOGOS[sub_name]
+            if g in s:
+                return sub_name, SUB_LOGOS[sub_name]
     return None, None
 
 def get_steam_turkey_price(sid):
@@ -246,12 +244,20 @@ def clean_game_title(title):
     for word in remove_words: cleaned = cleaned.replace(word, "")
     return cleaned.strip()
 
+def calculate_sort_score(game_title, search_term):
+    title_lower = game_title.lower()
+    search_lower = search_term.lower()
+    if title_lower == search_lower: return 0
+    if not any(x in title_lower for x in ["dlc", "pack", "soundtrack", "expansion", "bundle", "season pass", "coin", "credit"]): return 1
+    if any(x in title_lower for x in ["edition", "deluxe", "gold", "ultimate", "goty"]): return 2
+    return 3
+
 def timestamp_to_date(ts):
     if not ts: return ""
     try: return datetime.fromtimestamp(ts).strftime('%d.%m.%Y')
     except: return ""
 
-# --- 5. NAVİGASYON ---
+# --- 6. NAVİGASYON ---
 def go_home():
     st.session_state.active_page = 'home'
     st.session_state.page_number = 0
@@ -280,7 +286,7 @@ def increase_home_limit(key):
     st.session_state.home_limits[key] += 4
     st.rerun()
 
-# --- 6. VERİ MOTORU ---
+# --- 7. VERİ MOTORU ---
 def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
     url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy={sort_by}&onSale={on_sale}&pageSize={page_size}&pageNumber={page}"
     if sort_by == "Release":
@@ -293,11 +299,7 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
         for d in data:
             s_name = "Steam" if d['storeID'] == "1" else "Epic Games"
             price_tl = int(float(d['salePrice']) * dolar_kuru)
-            offer = {
-                "store": s_name, "price": price_tl, 
-                "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}",
-                "discount": float(d['savings'])
-            }
+            offer = {"store": s_name, "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}", "discount": float(d['savings'])}
             results.append({
                 "title": d['title'],
                 "thumb": get_game_image(d),
@@ -311,10 +313,7 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
                 "store": s_name,
                 "releaseDate": d.get('releaseDate', 0)
             })
-        
-        if sort_by == "Release":
-            results.sort(key=lambda x: x['releaseDate'], reverse=True)
-            
+        if sort_by == "Release": results.sort(key=lambda x: x['releaseDate'], reverse=True)
         return results
     except: return []
 
@@ -347,11 +346,7 @@ if s_btn and s_val:
 
 # ================= SAYFA 1: ANA SAYFA =================
 if st.session_state.active_page == 'home':
-    cats_config = [
-        ("🏆 En Popüler Başyapıtlar", "Metacritic", 0, "p1"),
-        ("🔥 Şuan İndirimde", "Savings", 1, "p2"),
-        ("✨ Yeni Çıkanlar", "Release", 0, "p3")
-    ]
+    cats_config = [("🏆 En Popüler Başyapıtlar", "Metacritic", 0, "p1"), ("🔥 Şuan İndirimde", "Savings", 1, "p2"), ("✨ Yeni Çıkanlar", "Release", 0, "p3")]
     for title, sort_key, sale_flag, limit_key in cats_config:
         st.subheader(title)
         current_limit = st.session_state.home_limits[limit_key]
@@ -403,13 +398,14 @@ elif st.session_state.active_page == 'category':
                 if st.button(f"{p_num + 1}", key=f"pg_{p_num}", type=b_type): set_page_num(p_num)
     else: st.info("Bu sayfada oyun yok.")
 
-# ================= SAYFA 3: DETAY =================
+# ================= SAYFA 3: DETAY (ABONELİK ÖNCELİKLİ) =================
 elif st.session_state.active_page == 'detail':
     game = st.session_state.selected_game
     desc, media_list, req_min, req_rec = get_steam_details_turkish(game.get('steamAppID'))
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
         st.image(game['thumb'], use_container_width=True)
+        # --- ABONELİK (RENKLİ & ŞIK) ---
         sub_n, sub_l = check_subscription(game['title'])
         if sub_n:
             border_c = SUB_COLORS.get(sub_n, "#555")
@@ -460,7 +456,7 @@ elif st.session_state.active_page == 'detail':
             if req_rec: st.markdown(req_rec, unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-# ================= SAYFA 4: ARAMA (AKILLI SIRALAMA) =================
+# ================= SAYFA 4: ARAMA =================
 elif st.session_state.active_page == 'search':
     term = st.session_state.search_term
     st.info(f"🔎 '{term}' aranıyor...")
@@ -474,9 +470,7 @@ elif st.session_state.active_page == 'search':
             if deal['storeID'] in s_map:
                 title = clean_game_title(deal['title'])
                 if title not in grouped:
-                    # PUANLAMA (EN ÖNEMLİ KISIM)
                     sort_score = calculate_sort_score(title, corrected)
-                    
                     grouped[title] = {
                         "title": deal['title'],
                         "thumb": get_game_image(deal),
@@ -484,7 +478,7 @@ elif st.session_state.active_page == 'search':
                         "user": int(deal['steamRatingPercent']),
                         "offers": [],
                         "steamAppID": deal.get('steamAppID'),
-                        "sort_score": sort_score # Sıralama için eklendi
+                        "sort_score": sort_score
                     }
                 if deal.get('steamAppID') and not grouped[title].get('steamAppID'):
                     grouped[title]['steamAppID'] = deal.get('steamAppID')
@@ -509,13 +503,9 @@ elif st.session_state.active_page == 'search':
                 grouped[title]["offers"].append({
                     "store": s_name, "price": price_final, "link": final_link
                 })
-        
         if grouped:
             st.success(f"✅ {len(grouped)} oyun bulundu.")
-            
-            # SIRALAMA: ÖNCE PUAN (0 En iyi), SONRA EN DÜŞÜK FİYAT
             g_list = sorted(grouped.values(), key=lambda x: (x['sort_score'], min(o['price'] for o in x['offers'])))
-            
             for game in g_list:
                 with st.container():
                     c1, c2, c3 = st.columns([1.5, 2.5, 3])
