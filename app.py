@@ -2,14 +2,12 @@ import streamlit as st
 import requests
 import streamlit.components.v1 as components
 from datetime import datetime
-import re
 import math
 
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
 PAGE_SIZE = 12
 PLACEHOLDER_IMG = "https://placehold.co/600x300/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
-RAWG_API_KEY = "c1e963e178f3416f97f7840a127af77b"
 
 # --- 2. GÖMÜLÜ LOGOLAR ---
 ICON_GAMEPASS = "data:image/png;base64,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"
@@ -31,7 +29,7 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; }
     .kur-kutusu { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #495057; font-size: 0.9em; text-align: center; border: 1px solid #dee2e6; }
-    div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 16/9; object-fit: cover; }
+    div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 2/3; object-fit: cover; }
     .vitrin-title { font-size: 0.9em; font-weight: bold; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
     .vitrin-price { font-size: 1.1em; font-weight: bold; color: #28a745; margin: 2px 0; }
     .vitrin-date { font-size: 0.75em; color: #666; margin-bottom: 5px; font-style: italic; }
@@ -119,47 +117,6 @@ def show_gallery_modal(media_list, start_idx=0):
         st.image(current_item['url'], use_container_width=True)
         st.caption(f"📷 Görsel {idx + 1} / {len(media_list)}")
     st.markdown(f"<div style='text-align:center; color:#888; font-size:0.8em;'>Diğer medyaya geçmek için yukarıdaki kaydırıcıyı kullanın.</div>", unsafe_allow_html=True)
-
-# --- ÇOKLU KAYNAKLI GÖRSEL AVCISI (STEAM + RAWG) ---
-@st.cache_data(ttl=3600)
-def fetch_best_image(game_name):
-    """
-    Oyun görseli bulmak için Steam -> RAWG sıralamasını kullanır.
-    FC 26 gibi olmayan oyunlar için manuel görsel atar.
-    """
-    
-    # 1. Manuel Düzeltmeler (Henüz Görseli Olmayanlar)
-    name_lower = game_name.lower()
-    if "fc 26" in name_lower: return "https://cdn.akamai.steamstatic.com/steam/apps/2195250/header.jpg" # FC 25 görseli (Geçici)
-    if "madden nfl 26" in name_lower: return "https://cdn.akamai.steamstatic.com/steam/apps/2582560/header.jpg" # Madden 25
-    if "f1 25" in name_lower: return "https://cdn.akamai.steamstatic.com/steam/apps/2488620/header.jpg" # F1 24
-    
-    # İsim Temizleme (Noktalama, Yıl vb.)
-    clean_name = re.sub(r'\(.*?\)', '', game_name).replace(':', '').replace('.', '')
-    
-    # 2. STEAM ARAMA (En Kaliteli Görsel)
-    try:
-        steam_url = f"https://store.steampowered.com/api/storesearch/?term={clean_name}&l=turkish&cc=tr"
-        r = requests.get(steam_url, timeout=2)
-        if r.status_code == 200:
-            data = r.json()
-            if data['total'] > 0:
-                item = data['items'][0]
-                # Steam Header Görseli (Yüksek Kalite)
-                return f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{item['id']}/header.jpg"
-    except: pass
-
-    # 3. RAWG ARAMA (Yedek)
-    try:
-        rawg_url = f"https://api.rawg.io/api/games?key={RAWG_API_KEY}&search={clean_name}&page_size=1"
-        r = requests.get(rawg_url, timeout=2)
-        if r.status_code == 200:
-            data = r.json()
-            if data['results']:
-                return data['results'][0].get('background_image')
-    except: pass
-
-    return PLACEHOLDER_IMG
 
 def get_dollar_rate():
     try:
@@ -320,7 +277,6 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
         return results
     except: return []
 
-# --- GÜÇLENDİRİLMİŞ LİSTE ÇEKİCİ ---
 def fetch_sub_games(sub_name, page=0, page_size=12):
     game_names = SUBSCRIPTIONS.get(sub_name, [])
     start = page * page_size
@@ -329,34 +285,42 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
     results = []
     
     for i, name in enumerate(batch):
-        # Varsayılan Obje (Garantili)
+        # Varsayılan Obje (Hatasız)
         game_obj = {
             "title": name,
             "thumb": PLACEHOLDER_IMG,
             "meta": 0, "user": 0,
-            "dealID": f"sub_{sub_name}_{start + i}", # ÇAKIŞMA ÖNLEYİCİ ID
+            "dealID": f"sub_{sub_name}_{start + i}", # BENZERSİZ ID
             "steamAppID": "0",
             "price": "---", "discount": 0.0, "store": sub_name, "offers": []
         }
         
-        # 1. GÖRSEL ARA (Steam > RAWG)
-        best_img = fetch_best_image(name)
-        if best_img: game_obj["thumb"] = best_img
+        # CheapShark'tan Veri Çek
+        try:
+            search_name = name.split(':')[0] if ':' in name else name 
+            url = f"https://www.cheapshark.com/api/1.0/deals?title={search_name}&exact=0&limit=1"
+            r = requests.get(url, timeout=2) # Timeout artırıldı
+            if r.status_code == 200:
+                data = r.json()
+                if data:
+                    d = data[0]
+                    # İsim benzerliği kontrolü
+                    if search_name.lower() in d['title'].lower():
+                        price_tl = int(float(d['salePrice']) * dolar_kuru)
+                        game_obj.update({
+                            "title": d['title'],
+                            "thumb": get_game_image(d),
+                            "meta": int(d['metacriticScore']),
+                            "user": int(d['steamRatingPercent']),
+                            "dealID": d['dealID'],
+                            "steamAppID": d.get('steamAppID'),
+                            "price": price_tl,
+                            "discount": float(d['savings']),
+                            "store": "Steam" if d['storeID'] == "1" else "Epic",
+                            "offers": [{"store": "Mağaza", "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}"}]
+                        })
+        except: pass
         
-        # 2. FİYAT (CheapShark)
-        if game_obj["thumb"] == PLACEHOLDER_IMG:
-            try:
-                search_name = name.split(':')[0]
-                url = f"https://www.cheapshark.com/api/1.0/deals?title={search_name}&exact=0&limit=1"
-                r = requests.get(url, timeout=1.0)
-                if r.status_code == 200:
-                    d = r.json()
-                    if d:
-                        item = d[0]
-                        game_obj["thumb"] = get_game_image(item)
-                        game_obj["dealID"] = item['dealID']
-            except: pass
-            
         results.append(game_obj)
     return results
 
@@ -415,7 +379,6 @@ if st.session_state.active_page == 'home':
                         c_p, c_d = st.columns([2, 1])
                         c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
-                        # BENZERSİZ KEY
                         if st.button("İncele", key=f"home_btn_{limit_key}_{i}_{j}"): go_detail(g)
             st.write("")
         if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"): increase_home_limit(limit_key)
@@ -445,7 +408,6 @@ elif st.session_state.active_page == 'category':
                         st.image(g['thumb'], use_container_width=True)
                         st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
-                        # BENZERSİZ KEY
                         if st.button("İncele", key=f"cat_btn_{curr_page}_{i}_{j}"): go_detail(g)
             st.write("")
         st.markdown("---")
@@ -461,10 +423,6 @@ elif st.session_state.active_page == 'category':
 # SAYFA: DETAY
 elif st.session_state.active_page == 'detail':
     game = st.session_state.selected_game
-    if game['thumb'] == PLACEHOLDER_IMG:
-        img_url = fetch_best_image(game['title'])
-        if img_url: game['thumb'] = img_url
-
     desc, media_list, req_min, req_rec = get_steam_details_turkish(game.get('steamAppID'))
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
@@ -560,10 +518,8 @@ elif st.session_state.active_page == 'search':
             for sub, games in SUBSCRIPTIONS.items():
                 for g_name in games:
                     if term.lower() in g_name.lower():
-                        img_url = fetch_best_image(g_name)
-                        thumb = img_url if img_url else PLACEHOLDER_IMG
                         grouped[g_name.title()] = {
-                            "title": g_name.title(), "thumb": thumb,
+                            "title": g_name.title(), "thumb": PLACEHOLDER_IMG,
                             "meta": 0, "user": 0, "sort_score": 0, "offers": [], "steamAppID": "0"
                         }
 
