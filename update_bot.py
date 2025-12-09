@@ -1,6 +1,5 @@
 import json
 import time
-import os
 import re
 from datetime import datetime
 from selenium import webdriver
@@ -15,47 +14,51 @@ FILE_NAME = "subscriptions.json"
 def setup_driver():
     """Hızlandırılmış Chrome Ayarları"""
     chrome_options = Options()
-    chrome_options.add_argument("--headless") # Ekransız mod
+    chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--disable-extensions") # Eklentileri kapat
-    chrome_options.add_argument("--blink-settings=imagesEnabled=false") # RESİMLERİ YÜKLEME (HIZ İÇİN)
-    chrome_options.page_load_strategy = 'eager' # Tüm sayfanın bitmesini bekleme, HTML gelince başla
+    chrome_options.add_argument("--disable-extensions")
+    # Resimleri yükleme (Hız için)
+    chrome_options.add_argument("--blink-settings=imagesEnabled=false")
+    # Sayfa yüklenmesini bekleme stratejisi (Hız için)
+    chrome_options.page_load_strategy = 'eager'
     
-    # Gerçek kullanıcı gibi görün
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
     return webdriver.Chrome(options=chrome_options)
 
 def clean_name(name):
+    """Oyun ismini temizler"""
     name = re.sub(r'\[.*?\]', '', name)
     name = re.sub(r'\(.*?\)', '', name)
     return name.strip()
 
-def scrape_with_selenium(url, target_col_name):
-    """Güvenli ve Hızlı Scraping"""
+def scrape_specific_condition(url, target_col_name, match_string, is_ubisoft=False):
+    """
+    Belirtilen sütunda, belirtilen HTML kodunu (match_string) arar.
+    """
     print(f"   🚀 Bağlanılıyor -> {url}")
     driver = setup_driver()
     games = []
     
     try:
-        # Sayfaya git (Timeout 20 saniye)
-        driver.set_page_load_timeout(30)
+        # 1. Sayfayı Aç
+        driver.set_page_load_timeout(45)
         try:
             driver.get(url)
         except:
             print("   ⚠️ Sayfa yüklenmesi uzun sürdü, işleme devam ediliyor...")
-            driver.execute_script("window.stop();") # Yüklemeyi durdur ve devam et
+            driver.execute_script("window.stop();")
 
-        # Tabloyu bekle (Max 5 saniye)
+        # 2. Tabloyu Bekle
         try:
-            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, "wikitable")))
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "wikitable")))
         except:
-            print("   ⚠️ Tablo hemen bulunamadı.")
+            print("   ⚠️ Tablo hemen bulunamadı, yine de deneniyor.")
 
         tables = driver.find_elements(By.CLASS_NAME, "wikitable")
-        print(f"   ℹ️ {len(tables)} tablo bulundu.")
+        print(f"   ℹ️ {len(tables)} tablo taraniyor...")
 
         for table in tables:
             try:
@@ -65,45 +68,79 @@ def scrape_with_selenium(url, target_col_name):
                 for i, h in enumerate(headers):
                     col_map[i] = h.text.strip().lower()
                 
-                # Hedef sütunu bul
+                # Hedef sütun indeksini bul
                 target_idx = -1
-                name_idx = 0 
+                name_idx = 0 # Genelde 0, ama bazen değişebilir
                 
-                for idx, text in col_map.items():
-                    if target_col_name.lower() in text:
-                        target_idx = idx
-                        break
+                # Ubisoft için özel durum: Direkt ilk sütunu alacağız
+                if is_ubisoft:
+                    target_idx = 0 
+                else:
+                    for idx, text in col_map.items():
+                        if target_col_name.lower() in text:
+                            target_idx = idx
+                            break
                 
-                if target_idx == -1: continue 
+                if target_idx == -1: continue # Bu tabloda aranan sütun yok
 
                 # Satırları gez
                 rows = table.find_elements(By.TAG_NAME, "tr")
-                for row in rows[1:]:
+                for row in rows[1:]: # Başlığı atla
                     cells = row.find_elements(By.TAG_NAME, "td")
-                    if len(cells) > target_idx:
-                        target_cell = cells[target_idx]
-                        
-                        # Hücre rengi veya içeriği kontrolü
-                        # PCGamingWiki'de yeşil tik için class="table-yes" kullanılır
-                        cell_html = target_cell.get_attribute('outerHTML').lower()
-                        is_active = "table-yes" in cell_html or "background" in cell_html or "available" in target_cell.text.lower()
-                        
-                        if is_active:
-                            # İsim bazen th bazen td olabilir, ilk elemanı al
+                    
+                    # Hücre sayısı yeterli mi?
+                    check_idx = target_idx
+                    # Bazen th ile başlar satır, o zaman kaydırma gerekebilir.
+                    # Garanti yöntem: Satırın HTML'ini alıp analiz etmek yerine hücreye gitmek.
+                    
+                    if len(cells) > 0:
+                        # Oyun İsmi (Genelde ilk hücre, bazen th olabilir)
+                        try:
+                            # İlk eleman (th veya td) oyun ismidir
                             name_el = row.find_elements(By.XPATH, "./*[1]")[0]
                             name = clean_name(name_el.text)
-                            if len(name) > 1:
+                        except: continue
+
+                        if not name: continue
+
+                        # Ubisoft ise direkt ekle
+                        if is_ubisoft:
+                            games.append(name)
+                            continue
+
+                        # Diğerleri için koşul kontrolü
+                        # Eğer target_idx hücrelerde varsa
+                        # NOT: 'th' olduğu için 'cells' listesi 1 eksik olabilir. 
+                        # Genelde 1. sütun TH, diğerleri TD'dir. Yani cells[target_idx - 1] olabilir.
+                        # PCGamingWiki yapısı: Oyun Adı (th/td) | Dev | Pub | Date | System | [Sütunlar...]
+                        
+                        # Basit ve sağlam yöntem: Satırın HTML'ini çekip bakmak yerine,
+                        # Hedef sütuna denk gelen hücrenin HTML'ine bakalım.
+                        
+                        # Hücreyi bulmaya çalışalım (Index kayması olabilir, dikkat)
+                        # Genelde Oyun ismi TH ise, cells listesi 0'dan başlar ve o 2. sütundur.
+                        # target_idx 5 ise, cells[4] olabilir.
+                        
+                        # Daha güvenli yöntem: Row içindeki tüm hücreleri alıp (th+td) indexe bakmak
+                        all_cells = row.find_elements(By.XPATH, "./*")
+                        if len(all_cells) > target_idx:
+                            target_cell = all_cells[target_idx]
+                            cell_html = target_cell.get_attribute('innerHTML')
+                            
+                            # KULLANICININ VERDİĞİ KRİTİK KOD KONTROLÜ
+                            if match_string in cell_html:
                                 games.append(name)
-            except:
-                continue # Tablo bozuksa sonrakine geç
+
+            except Exception as e:
+                continue 
 
     except Exception as e:
         print(f"   ❌ Hata: {e}")
     finally:
-        driver.quit() # Tarayıcıyı kesinlikle kapat
+        driver.quit()
         
     unique = sorted(list(set(games)))
-    print(f"   ✅ Toplanan: {len(unique)}")
+    print(f"   ✅ '{target_col_name}' için {len(unique)} oyun bulundu.")
     return unique
 
 def load_existing_data():
@@ -115,35 +152,57 @@ def load_existing_data():
     return {"Game Pass": [], "EA Play": [], "EA Play Pro": [], "Ubisoft+": []}
 
 def main():
-    print("🤖 --- ROBOT BAŞLATILIYOR (V6 - TURBO MODE) ---")
+    print("🤖 --- ROBOT BAŞLATILIYOR (V7 - CLASS DETECTIVE) ---")
     start_time = time.time()
     
     final_data = load_existing_data()
     
-    # 1. Game Pass
+    # 1. GAME PASS
+    # Kriter: "Game Pass for PC" sütununda "tickcross-true" sınıfı var mı?
     print("\n1️⃣ Game Pass...")
-    gp = scrape_with_selenium("https://www.pcgamingwiki.com/wiki/List_of_PC_Game_Pass_games", "game pass for pc")
+    gp = scrape_specific_condition(
+        "https://www.pcgamingwiki.com/wiki/List_of_PC_Game_Pass_games", 
+        "game pass for pc", 
+        "tickcross-true"
+    )
     if len(gp) > 50: final_data["Game Pass"] = gp
 
-    # 2. Ubisoft+
-    print("\n2️⃣ Ubisoft+...")
-    # Ubisoft için sadece oyun ismini almak yeterli, "game" sütunu her zaman vardır
-    ubi = scrape_with_selenium("https://www.pcgamingwiki.com/wiki/List_of_Ubisoft%2B_games", "game")
-    if len(ubi) > 10: final_data["Ubisoft+"] = ubi
-
-    # 3. EA Play & Pro
-    print("\n3️⃣ EA Play...")
-    ea_play = scrape_with_selenium("https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", "ea app")
+    # 2. EA PLAY (BASIC)
+    # Kriter: "EA App" sütununda "store-origin" sınıfı var mı?
+    print("\n2️⃣ EA Play...")
+    ea_play = scrape_specific_condition(
+        "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", 
+        "ea app", 
+        "store-origin"
+    )
     if len(ea_play) > 10: final_data["EA Play"] = ea_play
-    
-    print("\n4️⃣ EA Play Pro...")
-    ea_pro = scrape_with_selenium("https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", "ea play pro")
-    # Pro listesine manuel olarak yeni oyunları da ekleyelim (Garanti olsun)
-    manual_pro = ["FC 26", "FC 25", "F1 24", "Madden NFL 25", "Star Wars Jedi: Survivor", "Immortals of Aveum"]
+
+    # 3. EA PLAY PRO
+    # Kriter: "EA Play Pro" sütununda "store-origin" sınıfı var mı?
+    print("\n3️⃣ EA Play Pro...")
+    ea_pro = scrape_specific_condition(
+        "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", 
+        "ea play pro", 
+        "store-origin"
+    )
+    # Manuel destek (FC 26 vb. henüz listede yoksa)
+    manual_pro = ["FC 26", "FC 25", "F1 24", "Madden NFL 25", "Star Wars Jedi: Survivor"]
     if len(ea_pro) > 5:
         final_data["EA Play Pro"] = list(set(ea_pro + manual_pro))
     else:
+        # Eğer çekemezse eskisine manuel ekle
         final_data["EA Play Pro"] = list(set(final_data.get("EA Play Pro", []) + manual_pro))
+
+    # 4. UBISOFT+
+    # Kriter: Tüm oyunları al (is_ubisoft=True)
+    print("\n4️⃣ Ubisoft+...")
+    ubi = scrape_specific_condition(
+        "https://www.pcgamingwiki.com/wiki/List_of_Ubisoft%2B_games", 
+        "game", 
+        "", # String aramıyoruz, hepsini alıyoruz
+        is_ubisoft=True
+    )
+    if len(ubi) > 10: final_data["Ubisoft+"] = ubi
 
     # Zaman Damgası
     final_data["_meta"] = {
