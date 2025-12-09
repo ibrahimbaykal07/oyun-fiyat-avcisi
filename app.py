@@ -4,6 +4,7 @@ import streamlit.components.v1 as components
 from datetime import datetime
 import re
 import math
+import xml.etree.ElementTree as ET # XML okumak için gerekli
 
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
@@ -119,14 +120,15 @@ def show_gallery_modal(media_list, start_idx=0):
         st.caption(f"📷 Görsel {idx + 1} / {len(media_list)}")
     st.markdown(f"<div style='text-align:center; color:#888; font-size:0.8em;'>Diğer medyaya geçmek için yukarıdaki kaydırıcıyı kullanın.</div>", unsafe_allow_html=True)
 
+# --- DOLAR KURU (TCMB) ---
 def get_dollar_rate():
+    """Merkez Bankası'ndan Güncel Dolar Kurunu Çeker"""
     try:
         r = requests.get("https://www.tcmb.gov.tr/kurlar/today.xml", timeout=2)
-        from xml.etree import ElementTree as ET
         root = ET.fromstring(r.content)
         for c in root.findall('Currency'):
             if c.get('Kod') == 'USD': return float(c.find('ForexSelling').text)
-    except: return 36.50
+    except: return 36.50 # Yedek kur
 
 def get_game_image(deal):
     sid = deal.get('steamAppID')
@@ -265,6 +267,7 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
         results = []
         for d in data:
             s_name = "Steam" if d['storeID'] == "1" else "Epic Games"
+            # DOLAR -> TL ÇEVİRİ
             price_tl = int(float(d['salePrice']) * dolar_kuru)
             offer = {"store": s_name, "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}", "discount": float(d['savings'])}
             results.append({
@@ -278,39 +281,30 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
         return results
     except: return []
 
-# --- AKILLI FİYAT AVCISI (V72 - MULTI-TRY) ---
+# --- AKILLI FİYAT AVCISI (V72) ---
 @st.cache_data(ttl=3600)
 def fetch_price_smart(game_name):
-    """
-    Oyunun fiyatını bulmak için ismin farklı varyasyonlarını dener.
-    Bulamazsa '---' döner ama hata vermez.
-    """
-    # Denenecek isim varyasyonları
+    # İsim varyasyonları
     search_candidates = [
-        game_name, # Orijinal: Call of Duty: Black Ops 6
-        re.sub(r'[^\w\s]', '', game_name), # Noktalamasız: Call of Duty Black Ops 6
-        game_name.split(':')[0], # İlk kısım: Call of Duty
-        re.sub(r'\(\d{4}\)', '', game_name).strip() # Yılsız: Forza Motorsport
+        game_name, 
+        re.sub(r'[^\w\s]', '', game_name), 
+        game_name.split(':')[0], 
+        re.sub(r'\(\d{4}\)', '', game_name).strip()
     ]
+    if "fc 26" in game_name.lower(): return None
     
-    # Özel durumlar
-    if "fc 26" in game_name.lower(): return None # Çıkmadı
-    
-    for query in list(set(search_candidates)): # Tekrarları sil
+    for query in list(set(search_candidates)):
         if len(query) < 3: continue
         try:
             url = f"https://www.cheapshark.com/api/1.0/deals?title={query}&exact=0&limit=1"
-            r = requests.get(url, timeout=3) # Timeout artırıldı
+            r = requests.get(url, timeout=3)
             if r.status_code == 200:
                 data = r.json()
                 if data:
                     d = data[0]
-                    # Basit doğrulama (Alakasız oyun gelmesin)
-                    # Aranan kelimenin en az bir parçası sonuçta geçmeli
                     if query.split()[0].lower() in d['title'].lower():
                         return d
         except: pass
-    
     return None
 
 def fetch_sub_games(sub_name, page=0, page_size=12):
@@ -321,12 +315,12 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
     results = []
     
     for i, name in enumerate(batch):
-        # Varsayılan Obje (Garantili)
+        # Varsayılan Obje
         game_obj = {
             "title": name,
             "thumb": PLACEHOLDER_IMG,
             "meta": 0, "user": 0,
-            "dealID": f"sub_{sub_name}_{start + i}", # BENZERSİZ ID
+            "dealID": f"sub_{sub_name}_{start + i}", # Benzersiz ID
             "steamAppID": "0",
             "price": "---", "discount": 0.0, "store": sub_name, "offers": []
         }
@@ -335,9 +329,10 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
         deal_data = fetch_price_smart(name)
         
         if deal_data:
+            # DOLAR -> TL ÇEVİRİ
             price_tl = int(float(deal_data['salePrice']) * dolar_kuru)
             game_obj.update({
-                "title": deal_data['title'], # API'den gelen gerçek isim
+                "title": deal_data['title'],
                 "thumb": get_game_image(deal_data),
                 "meta": int(deal_data['metacriticScore']),
                 "user": int(deal_data['steamRatingPercent']),
@@ -541,6 +536,7 @@ elif st.session_state.active_page == 'search':
                 elif s_name == "Epic Games":
                     ep_p, _, ep_l = get_epic_price_local(deal['title'])
                     if ep_p: p_usd = ep_p
+                # DOLAR -> TL ÇEVİRİ
                 price_final = int(p_usd) if s_name in ["Steam", "Epic Games"] else int(p_usd * dolar_kuru)
                 grouped[title]["offers"].append({"store": s_name, "price": price_final, "link": final_link})
         
