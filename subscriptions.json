@@ -22,14 +22,20 @@
         "hollow knight"
     ],
     "EA Play Pro": [
-        "fc 26",
-        "fc 25",
-        "f1 24",
-        "madden nfl 25",
-        "star wars jedi: survivor",
-        "immortals of aveum",
         "wild hearts",
-        "dead space remake"
+        "F1 24",
+        "dead space remake",
+        "Madden NFL 25",
+        "madden nfl 25",
+        "Immortals of Aveum",
+        "Star Wars Jedi: Survivor",
+        "fc 26",
+        "immortals of aveum",
+        "f1 24",
+        "fc 25",
+        "star wars jedi: survivor",
+        "FC 25",
+        "FC 26"
     ],
     "EA Play": [
         "fc 24",
@@ -65,6 +71,6 @@
         "riders republic"
     ],
     "_meta": {
-        "last_updated": "2025-12-09 06:30:05"
+        "last_updated": "2025-12-09 07:10:35"
     }
 }
