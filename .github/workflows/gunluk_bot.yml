@@ -2,9 +2,8 @@ name: Oyun Listesi Robotu
 
 on:
   schedule:
-    # UTC 04:00 = Türkiye Saati ile 07:00
-    - cron: '0 4 * * *'
-  workflow_dispatch: # Manuel tetikleme butonu
+    - cron: '0 4 * * *' # Her sabah 07:00
+  workflow_dispatch: # Manuel tetikleme
 
 permissions:
   contents: write
@@ -22,10 +21,14 @@ jobs:
         with:
           python-version: '3.9'
 
+      # Chrome Tarayıcıyı Kuruyoruz
+      - name: Chrome Setup
+        uses: browser-actions/setup-chrome@v1
+
       - name: Kütüphaneleri Yükle
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+          pip install requests selenium webdriver-manager beautifulsoup4
 
       - name: Robotu Çalıştır
         run: python update_bot.py
@@ -35,4 +38,4 @@ jobs:
           git config --global user.name 'OyunFiyatBotu'
           git config --global user.email 'bot@noreply.github.com'
           git add subscriptions.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 PCGW: Liste güncellendi" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 Selenium: Liste güncellendi" && git push)
