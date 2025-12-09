@@ -1,7 +1,7 @@
 import json
 import time
-import os
 import re
+import os
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -15,18 +15,18 @@ from selenium.webdriver.support import expected_conditions as EC
 FILE_NAME = "subscriptions.json"
 
 def setup_driver():
-    """GitHub Actions Uyumlu Sürücü Ayarları"""
+    """Hızlandırılmış Sürücü"""
     chrome_options = Options()
     chrome_options.add_argument("--headless") 
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--disable-extensions")
+    # Resimleri ve gereksizleri engelle
     chrome_options.add_argument("--blink-settings=imagesEnabled=false")
-    chrome_options.page_load_strategy = 'eager'
+    chrome_options.page_load_strategy = 'eager' # HTML gelir gelmez başla
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
-    # OTOMATİK SÜRÜCÜ KURULUMU
     service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=chrome_options)
 
@@ -35,37 +35,42 @@ def clean_name(name):
     name = re.sub(r'\(.*?\)', '', name)
     return name.strip()
 
-def scrape_specific_condition(url, target_col_name, match_string, is_ubisoft=False):
+def scrape_with_timeout(url, target_col_name, match_string, is_ubisoft=False):
     print(f"   🚀 Bağlanılıyor -> {url}")
     games = []
     driver = None
     
     try:
         driver = setup_driver()
-        driver.set_page_load_timeout(60)
+        # KRİTİK AYAR: 20 saniyede açılmazsa durdur ve devam et
+        driver.set_page_load_timeout(20)
         
         try:
             driver.get(url)
         except:
-            print("   ⚠️ Sayfa yükleme zaman aşımı (devam ediliyor)...")
+            print("   ⚠️ Zaman aşımı! Yükleme durduruluyor ve okumaya geçiliyor...")
             driver.execute_script("window.stop();")
 
+        # Tabloyu bekle (Max 5 sn)
         try:
-            WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME, "wikitable")))
+            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, "wikitable")))
         except:
-            print("   ⚠️ Tablo bulunamadı.")
+            pass # Bekleme, varsa al yoksa devam et
 
         tables = driver.find_elements(By.CLASS_NAME, "wikitable")
         print(f"   ℹ️ {len(tables)} tablo taraniyor...")
 
         for table in tables:
             try:
+                # Başlıkları al
                 headers = table.find_elements(By.TAG_NAME, "th")
                 col_map = {}
                 for i, h in enumerate(headers):
                     col_map[i] = h.text.strip().lower()
                 
+                # Hedef sütunu bul
                 target_idx = -1
+                
                 if is_ubisoft:
                     target_idx = 0 
                 else:
@@ -76,10 +81,13 @@ def scrape_specific_condition(url, target_col_name, match_string, is_ubisoft=Fal
                 
                 if target_idx == -1: continue 
 
+                # Satırları gez
                 rows = table.find_elements(By.TAG_NAME, "tr")
                 for row in rows[1:]:
                     cells = row.find_elements(By.TAG_NAME, "td")
+                    
                     try:
+                        # Oyun ismi
                         first_cell = row.find_elements(By.XPATH, "./*[1]")[0]
                         name = clean_name(first_cell.text)
                     except: continue
@@ -90,23 +98,25 @@ def scrape_specific_condition(url, target_col_name, match_string, is_ubisoft=Fal
                         games.append(name)
                         continue
 
+                    # Koşul kontrolü
                     all_cells = row.find_elements(By.XPATH, "./*")
                     if len(all_cells) > target_idx:
                         target_cell = all_cells[target_idx]
                         cell_html = target_cell.get_attribute('innerHTML')
+                        
+                        # Kullanıcının verdiği class/kod kontrolü
                         if match_string in cell_html:
                             games.append(name)
 
-            except Exception as inner_e:
-                continue 
+            except: continue 
 
     except Exception as e:
-        print(f"   ❌ Genel Hata: {e}")
+        print(f"   ❌ Hata: {e}")
     finally:
         if driver: driver.quit()
         
     unique = sorted(list(set(games)))
-    print(f"   ✅ '{target_col_name}' için {len(unique)} oyun bulundu.")
+    print(f"   ✅ '{target_col_name}' -> {len(unique)} oyun.")
     return unique
 
 def load_existing_data():
@@ -118,50 +128,44 @@ def load_existing_data():
     return {"Game Pass": [], "EA Play": [], "EA Play Pro": [], "Ubisoft+": []}
 
 def main():
-    print("🤖 --- ROBOT BAŞLATILIYOR (V9 - FIXED OS ERROR) ---")
-    
+    print("🤖 --- ROBOT BAŞLATILIYOR (V10 - ANTI-FREEZE) ---")
     final_data = load_existing_data()
     
     # 1. GAME PASS
     print("\n1️⃣ Game Pass...")
-    gp = scrape_specific_condition(
+    gp = scrape_with_timeout(
         "https://www.pcgamingwiki.com/wiki/List_of_PC_Game_Pass_games", 
-        "game pass for pc", 
-        "tickcross-true"
+        "game pass for pc", "tickcross-true"
     )
     if len(gp) > 10: final_data["Game Pass"] = gp
 
-    # 2. EA PLAY (BASIC)
+    # 2. EA PLAY
     print("\n2️⃣ EA Play...")
-    ea_play = scrape_specific_condition(
+    ea_play = scrape_with_timeout(
         "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", 
-        "ea app", 
-        "store-origin"
+        "ea app", "store-origin"
     )
     if len(ea_play) > 5: final_data["EA Play"] = ea_play
 
     # 3. EA PLAY PRO
     print("\n3️⃣ EA Play Pro...")
-    ea_pro = scrape_specific_condition(
+    ea_pro = scrape_with_timeout(
         "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", 
-        "ea play pro", 
-        "store-origin"
+        "ea play pro", "store-origin"
     )
     manual_pro = ["FC 26", "FC 25", "F1 24", "Madden NFL 25", "Star Wars Jedi: Survivor"]
-    
     if len(ea_pro) > 2:
         final_data["EA Play Pro"] = list(set(ea_pro + manual_pro))
     else:
+        # Hata olursa eskiyi koru + manuel
         existing = final_data.get("EA Play Pro", [])
         final_data["EA Play Pro"] = list(set(existing + manual_pro))
 
     # 4. UBISOFT+
     print("\n4️⃣ Ubisoft+...")
-    ubi = scrape_specific_condition(
+    ubi = scrape_with_timeout(
         "https://www.pcgamingwiki.com/wiki/List_of_Ubisoft%2B_games", 
-        "game", 
-        "", 
-        is_ubisoft=True
+        "game", "", is_ubisoft=True
     )
     if len(ubi) > 10: final_data["Ubisoft+"] = ubi
 
