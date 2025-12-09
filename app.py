@@ -1,14 +1,13 @@
 import streamlit as st
 import requests
-import json
-import math
 import streamlit.components.v1 as components
 from datetime import datetime
+import math
 
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
 PAGE_SIZE = 12
-PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
+PLACEHOLDER_IMG = "https://placehold.co/600x900/222/FFF/png?text=Gorsel+Yok"
 
 # --- 2. GÖMÜLÜ LOGOLAR (BASE64) ---
 ICON_GAMEPASS = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAABmJLR0QA/wD/AP+gvaeTAAAHpElEQVRoge2ZbWxT1xXHf+f62Q87iZ04L0kIJCWtlJIOtGVTWxmD+rGq6zc2qAS1q1SfKtWqTZu0amo/bFq1atKmH9a2WhWqMvhRRa10TEpLw4OytDQJIZCEOGDi2E6c2I/r+52H4iQk3xsnIXxJz9u995xz/vf+z733nOsr8T/hIr9vA25WbgfkduV2QG5XblqQe9/9Y41S6iGl1DpN00o0TSsRQihN00oqpZRSSimllBJCqL/89Y+dNyXIX/76Z61KqacB3bZtVNM02raNpmm4XC6cTidOp7NojFJKKaXUv/7y504A7/3xL53FfS8aZH+/97BS6mnA8Pv9eL1efD4fPp8Pt9uN2+3G5XLhcDhQSiGlxDAMDMNASomUki+++OIy8O7v/3CyqP9Fg/z5b38yAH22bdPa2kpbWxttbW10dHALPp8Pt9t9Q4OUUmiahmEYSCmRUuLxePB4PCilEEJgGAYG8O7v/9hfNMi+fe91KaWeBvRQKCQOHz5MOBwmEAhgWRamaaJp2o0NApBlWdm2bV+3bp04fPgwlmVl4zRNQ9M0lFIEAgF8Ph9SSvR3fvfH/qJBAPr+/u91AE3TtOzAgQMEAgEGBwexLAtN07AsC8uybnqQUgpd1zN1dXX6+vXrRV9fH4ZhoGkaTqcTTdMwDAPDMPB6vfi8Poy3f180CMAA9HA4LA8dOkR/fz+WZRVC0DQNwzAoFfF4XJ9z587R2trK5cuXMU0TISSeogdBSommaYRCIQKBALZt4933+7+u+k8Kct97f6gFaJqmyYMHDxIOhzFNE8uysCwLwzCQUha1l1LyySefsHz5clpaWrAsC8MwcDgc2LaNZVmYpollWViWhWVZSCkRQrBixQqCQa/445/+vKpoEICmaVp28OBBQqEQlmVlQZRSNzcIoK+vj4aGBpqbmzEMg4qKCtasWcORI0fwer2YponT6cQwDCzLwrIsdF3H6/USCoUwTfONIkEAhm3b8tChQwSDQSzLyobouo7D4cCyrKJ2Ukq6u7tZvHgxixYtAuDgwYMsXbqU6urqbJyu6xiGgWVZSCnx+/0EAgFM08R7f//H/qJBAPq2bdt04MABBgYGMAwDIdA0DafTiZQS0zSL2g3DIBwO09DQgMPhwLIsuru7qaurw+12YxgGlmXB1VBD13U8Hg/BcIhgMIhhGHj3vfdH0SAADdu25aFDhwgGg1iWhWEY6LqOw+HAsiwMw8A0zaJ20zQZHh6mqamJYDCIlJLu7m6WLVuG1+vFMAwsy8K2bSzLQtM0PB4PgUCAYDCIaZp4f/eH40WD7Hv3D7UAw7ZtefDgQYLBIIZhoGkagUAAt9t9w4MopRgYGGDp0qV0dXWRTCbp7u6mubmZsrIyDMO4OkjXdbxeL8FgkGAwiGmaGG/v/33RIADdNM3s4cOHCQQCWJaFaZpIKSkrK7vhQZRSJBIJmpqa6OrqIpVK0dPTQ3NzM+Xl5RiGgWVZWJaFpmlIKSkrKyMYDBIMBrEsC+Ptf/x90SAADdM05aFDhwgGg1iWheFwYBgGbre7qL2UksHBQZqbm+nu7iaVStHd3U1zczPl5eUYhoFlWViWhRCCsrIygsEggUAASQnvvv/H40WDAAzTNOXBgwfp7+/HNE0Mw8DpdOL1eolGo0XtpZQMDAzQ3NxMV1cXqVSK7u5uFi5cSFlZGYZhoOs6lmVlQcrKyggGgwQCASzLwnj3D38sGuTf//rnDqA3DEMSDAaJRCJIKXE4HDidTrxeL16PB9M0MU2zqN0wDPr6+li5ciV1dXUAHD16lJaWFrxeL4ZhYFkWlmWh6zper5dgMIhpmhBCvPXeH/uLBtm3770O4A3btunv7ycajSKlxOVy4fV68fl8SCkxDKNonGma9Pb20tjYyKpVqwDo6+ujubkZr9eLYRhYloVlWej/h2AwSCgUwrIsjHfe/6NfCLHnBrd9773XAXzHtm06ePAgkUgEKSVOpxOv14vP50PXdUzTLBpnmiY9PT00NjbS3t4OwNGjR1m+fDlerxfDMLAsC9u20XUdt9tNMHg1SMMw8N7Z98fios+I/f3ew8BbwJvxeJwTJ06QTCaRUuJ0OvF4PHi9XlzXF2WK2g3DoKenB4fDQX19PQCHDx+mubkZr9eLYRjYto1t2+i6jtfrJRgMEg6HMQzjDfr7vccX3SD73nqvBfgO8FZbWxtdXV2kUimklLhcLrxeLz6fD13XMU2zaJxpmvT09NDQ0EB7ezsAR48eZcWKFXi9XgzDwLZtbNtG13W8Xi/BYJBwOIxpmhivv/fH4qLPiP393sPAd4C3Tpw4QWtrK8lkEiklrut3wuPxoOs6pmnedIdhGHR3d+NwOGhoaADg8OHDLF++HK/Xi2EY2LaNbdu4XC68Xi/BYJBwOIxhGG+w790/Hl90gwD0ffve6wD+DLw1ODjIsWPHSKVSCCFwOp14vV58Ph+6rmOaZtE40zTp6emhoaGB9vZ2AI4ePcpTTz2F1+vFMAxs28a2bVwul7/Ybn8A+K//fSfcrtwOyO3K7YDcrtwOyO3K/wHFw9x42M/CTAAAAABJRU5ErkJggg=="
@@ -58,20 +57,57 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. VERİTABANI YÜKLEME (CRITICAL FIX) ---
-def load_subscriptions():
-    try:
-        with open('subscriptions.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            # Robotun attığı _meta bilgisini temizle ki site bozulmasın
-            if "_meta" in data:
-                del data["_meta"]
-            return data
-    except Exception as e:
-        # Hata durumunda boş şablon (Sitenin çökmemesi için)
-        return {"Game Pass": [], "EA Play Pro": [], "EA Play": [], "Ubisoft+": []}
+# --- 4. MANUEL ABONELİK LİSTESİ (PCGamingWiki Kaynaklı - Güncel) ---
+SUBSCRIPTIONS = {
+    "Game Pass": [
+        "Call of Duty: Black Ops 6", "Call of Duty: Modern Warfare III", "Diablo IV", "Starfield", 
+        "Forza Motorsport", "Forza Horizon 5", "Halo Infinite", "Microsoft Flight Simulator 2024", 
+        "Senua's Saga: Hellblade II", "S.T.A.L.K.E.R. 2: Heart of Chornobyl", "Indiana Jones and the Great Circle", 
+        "Avowed", "Ara: History Untold", "Age of Mythology: Retold", "Persona 3 Reload", 
+        "Like a Dragon: Infinite Wealth", "Palworld", "Lies of P", "Cocoon", "Sea of Stars", 
+        "Hi-Fi RUSH", "Atomic Heart", "Wo Long: Fallen Dynasty", "A Plague Tale: Requiem", 
+        "Scorn", "Grounded", "Pentiment", "High On Life", "Deathloop", "Ghostwire: Tokyo", 
+        "Minecraft", "Sea of Thieves", "Gears 5", "Doom Eternal", "Halo: The Master Chief Collection", 
+        "Age of Empires IV", "Psychonauts 2", "Back 4 Blood", "Sniper Elite 5", "Monster Hunter Rise", 
+        "Assassin's Creed Valhalla", "Assassin's Creed Odyssey", "Assassin's Creed Origins", 
+        "Far Cry 6", "Far Cry 5", "Watch Dogs 2", "Tom Clancy's Rainbow Six Siege", "FIFA 23", 
+        "Battlefield 2042", "Mass Effect Legendary Edition", "It Takes Two", "Need for Speed Unbound", 
+        "Star Wars Jedi: Fallen Order", "Titanfall 2", "Dead Space (2008)", "Dragon Age: Inquisition", 
+        "The Sims 4", "Cities: Skylines II", "Football Manager 2024", "Payday 3", 
+        "Warhammer 40,000: Darktide", "Remnant 2", "Hollow Knight", "Stardew Valley", 
+        "Vampire Survivors", "Valheim", "Among Us", "No Man's Sky", "Fallout 4", "Fallout 76", 
+        "Skyrim Special Edition", "Control Ultimate Edition", "Dishonored 2", "Prey", 
+        "Wolfenstein II", "Yakuza: Like a Dragon", "Yakuza 0", "Persona 5 Royal", "Persona 4 Golden", 
+        "Tunic", "Dead Cells", "Slay the Spire", "Celeste", "Undertale", "Ori and the Will of the Wisps"
+    ],
+    "EA Play Pro": [
+        "EA SPORTS FC 25", "Madden NFL 25", "F1 24", "Star Wars Jedi: Survivor", 
+        "Immortals of Aveum", "Wild Hearts", "Dead Space (2023 Remake)", "Tales of Kenzera: ZAU", 
+        "PGA Tour", "Super Mega Baseball 4", "WRC 23", "Lost in Random", "Knockout City",
+        "It Takes Two", "Mass Effect Legendary Edition", "Need for Speed Unbound", "Battlefield 2042"
+    ],
+    "EA Play": [
+        "EA SPORTS FC 24", "FIFA 23", "F1 23", "Madden NFL 24", "Battlefield 2042", "Battlefield V", 
+        "Battlefield 1", "Star Wars Jedi: Fallen Order", "Star Wars Battlefront II", 
+        "Mass Effect Legendary Edition", "Titanfall 2", "The Sims 4", "Need for Speed Unbound", 
+        "Need for Speed Heat", "It Takes Two", "A Way Out", "Unravel Two", "Dragon Age: Inquisition", 
+        "Crysis Remastered", "Dead Space 3", "Plants vs. Zombies: Battle for Neighborville", 
+        "Skate 3", "Burnout Paradise Remastered", "Mirror's Edge Catalyst"
+    ],
+    "Ubisoft+": [
+        "Assassin's Creed Shadows", "Star Wars Outlaws", "Avatar: Frontiers of Pandora", 
+        "Prince of Persia: The Lost Crown", "Assassin's Creed Mirage", "The Crew Motorfest", 
+        "Skull and Bones", "Assassin's Creed Valhalla", "Assassin's Creed Odyssey", 
+        "Assassin's Creed Origins", "Far Cry 6", "Far Cry 5", "Far Cry New Dawn", 
+        "Tom Clancy's Rainbow Six Siege", "Tom Clancy's Rainbow Six Extraction", 
+        "Tom Clancy's The Division 2", "Tom Clancy's Ghost Recon Breakpoint", 
+        "Tom Clancy's Ghost Recon Wildlands", "Watch Dogs: Legion", "Watch Dogs 2", 
+        "Immortals Fenyx Rising", "Riders Republic", "Anno 1800", "For Honor", 
+        "The Settlers: New Allies", "Scott Pilgrim vs. The World", "Rayman Legends", 
+        "South Park: The Fractured But Whole", "Steep", "Trackmania"
+    ]
+}
 
-SUBSCRIPTIONS = load_subscriptions()
 STORE_LOGOS = {"Steam": "https://cdn.simpleicons.org/steam/171a21", "Epic Games": "https://cdn.simpleicons.org/epicgames/333333", "Ubisoft Connect": "https://cdn.simpleicons.org/ubisoft/0099FF", "EA App": "https://cdn.simpleicons.org/ea/FF4747", "GOG": "https://cdn.simpleicons.org/gogdotcom/893CE7"}
 
 # --- 5. SESSION STATE ---
@@ -238,7 +274,8 @@ def increase_home_limit(key):
 # --- 8. VERİ MOTORU ---
 def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
     url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy={sort_by}&onSale={on_sale}&pageSize={page_size}&pageNumber={page}"
-    if sort_by == "Release": url += "&desc=1"
+    if sort_by == "Release":
+        url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy=Release&onSale={on_sale}&pageSize={page_size}&pageNumber={page}&desc=1"
     if sort_by == "Metacritic": url += "&upperPrice=60&metacritic=70"
     try:
         data = requests.get(url).json()
@@ -378,21 +415,12 @@ elif st.session_state.active_page == 'category':
         
         st.markdown("---")
         if total_pages > 1:
-            # Akıllı Pagination: Max 10 sayfa göster
-            display_range = 10
-            start_p = max(0, curr_page - 4)
-            end_p = min(total_pages, start_p + display_range)
-            
-            # Kolonları oluştur
-            cols = st.columns(end_p - start_p)
-            
-            for i in range(start_p, end_p):
-                col_idx = i - start_p
-                with cols[col_idx]:
-                    b_type = "primary" if i == curr_page else "secondary"
-                    # Buton etiketini [1], [2] formatında yap
-                    if st.button(f"{i + 1}", key=f"pg_{i}", type=b_type):
-                        set_page_num(i)
+            cols = st.columns(min(total_pages, 10))
+            for p in range(total_pages):
+                if p < 10:
+                    with cols[p]:
+                        b_type = "primary" if p == curr_page else "secondary"
+                        if st.button(str(p+1), key=f"page_{p}", type=b_type): set_page_num(p)
     else: st.info("Bu sayfada oyun yok.")
 
 # SAYFA: DETAY
@@ -404,7 +432,7 @@ elif st.session_state.active_page == 'detail':
         st.image(game['thumb'], use_container_width=True)
         sub_n, sub_cls = check_subscription(game['title'])
         if sub_n:
-            st.markdown(f"""<span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>""", unsafe_allow_html=True)
+            st.markdown(f"<span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>", unsafe_allow_html=True)
             if st.button(f"Tüm {sub_n} Listesi", key="sub_link"): go_category(sub_n, None, None, True)
     with c2:
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
@@ -510,7 +538,7 @@ elif st.session_state.active_page == 'search':
                         sub_n, sub_cls = check_subscription(game['title'])
                         if sub_n:
                             st.markdown(f"<span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>", unsafe_allow_html=True)
-                            if st.button(f"Tüm {sub_n} Listesi", key=f"src_sub_{game['title']}"): go_category(sub_n, None, None, True)
+                            if st.button(f"Listeye Git ({sub_n})", key=f"src_sub_{game['title']}"): go_category(sub_n, None, None, True)
                         st.write("")
                         if game['meta']>0: 
                             mc=get_meta_color(game['meta'])
