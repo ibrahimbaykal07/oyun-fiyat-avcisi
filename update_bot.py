@@ -15,108 +15,115 @@ from selenium.webdriver.support import expected_conditions as EC
 FILE_NAME = "subscriptions.json"
 
 def setup_driver():
-    """Hızlandırılmış Sürücü"""
+    """Stabil Sürücü Ayarları"""
     chrome_options = Options()
     chrome_options.add_argument("--headless") 
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--disable-extensions")
-    # Resimleri ve gereksizleri engelle
-    chrome_options.add_argument("--blink-settings=imagesEnabled=false")
-    chrome_options.page_load_strategy = 'eager' # HTML gelir gelmez başla
+    chrome_options.add_argument("--blink-settings=imagesEnabled=false") # Hız için
+    
+    # User Agent (Bot gibi görünmemek için)
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
     
     service = Service(ChromeDriverManager().install())
     return webdriver.Chrome(service=service, options=chrome_options)
 
 def clean_name(name):
+    # Dipnotları temizle: "Halo Infinite[2]" -> "Halo Infinite"
     name = re.sub(r'\[.*?\]', '', name)
     name = re.sub(r'\(.*?\)', '', name)
     return name.strip()
 
-def scrape_with_timeout(url, target_col_name, match_string, is_ubisoft=False):
+def scrape_universal(url, target_col_name, check_green=True):
+    """
+    Evrensel Tablo Okuyucu (TH ve TD fark etmeksizin okur)
+    check_green: True ise hedef sütunda yeşil tik arar. False ise tüm listeyi alır (Ubisoft gibi).
+    """
     print(f"   🚀 Bağlanılıyor -> {url}")
+    driver = setup_driver()
     games = []
-    driver = None
     
     try:
-        driver = setup_driver()
-        # KRİTİK AYAR: 20 saniyede açılmazsa durdur ve devam et
-        driver.set_page_load_timeout(20)
-        
+        driver.get(url)
+        # Tablonun tamamen yüklenmesi için bekle
         try:
-            driver.get(url)
+            WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME, "wikitable")))
         except:
-            print("   ⚠️ Zaman aşımı! Yükleme durduruluyor ve okumaya geçiliyor...")
-            driver.execute_script("window.stop();")
-
-        # Tabloyu bekle (Max 5 sn)
-        try:
-            WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CLASS_NAME, "wikitable")))
-        except:
-            pass # Bekleme, varsa al yoksa devam et
+            print("   ⚠️ Tablo geç yüklendi veya bulunamadı.")
 
         tables = driver.find_elements(By.CLASS_NAME, "wikitable")
         print(f"   ℹ️ {len(tables)} tablo taraniyor...")
 
         for table in tables:
             try:
-                # Başlıkları al
+                # 1. Başlıkları analiz et ve hedef sütunu bul
                 headers = table.find_elements(By.TAG_NAME, "th")
                 col_map = {}
                 for i, h in enumerate(headers):
                     col_map[i] = h.text.strip().lower()
                 
-                # Hedef sütunu bul
                 target_idx = -1
+                name_idx = 0 # Oyun ismi genelde ilk sütundur
                 
-                if is_ubisoft:
-                    target_idx = 0 
-                else:
+                # Eğer yeşil tik kontrolü yapılacaksa sütunu bul
+                if check_green:
                     for idx, text in col_map.items():
                         if target_col_name.lower() in text:
                             target_idx = idx
                             break
+                    if target_idx == -1: continue # Bu tabloda aradığımız sütun yok, atla
                 
-                if target_idx == -1: continue 
-
-                # Satırları gez
+                # 2. Satırları gez
                 rows = table.find_elements(By.TAG_NAME, "tr")
-                for row in rows[1:]:
-                    cells = row.find_elements(By.TAG_NAME, "td")
+                for row in rows[1:]: # Başlığı atla
+                    # --- KRİTİK DÜZELTME ---
+                    # Sadece 'td' değil, 'th' de olabilir (Oyun isimleri bazen başlıktır)
+                    # Bu yüzden xpath ./* kullanarak tüm çocukları sırasıyla alıyoruz
+                    cells = row.find_elements(By.XPATH, "./*")
                     
+                    if not cells: continue
+                    
+                    # Oyun İsmi (İlk Hücre)
                     try:
-                        # Oyun ismi
-                        first_cell = row.find_elements(By.XPATH, "./*[1]")[0]
-                        name = clean_name(first_cell.text)
+                        raw_name = cells[0].text
+                        game_name = clean_name(raw_name)
                     except: continue
 
-                    if not name: continue
+                    if len(game_name) < 2: continue
 
-                    if is_ubisoft:
-                        games.append(name)
-                        continue
+                    # 3. Kontrol Mantığı
+                    if not check_green:
+                        # Ubisoft gibi düz listeler: Direkt ekle
+                        games.append(game_name)
+                    else:
+                        # Game Pass / EA gibi onaylı listeler
+                        if len(cells) > target_idx:
+                            cell = cells[target_idx]
+                            html_content = cell.get_attribute('outerHTML').lower()
+                            text_content = cell.text.lower()
+                            
+                            # Yeşil Tik Kontrolü (Genişletilmiş)
+                            is_active = False
+                            if "tickcross-true" in html_content: is_active = True
+                            elif "table-yes" in html_content: is_active = True
+                            elif "store-origin" in html_content: is_active = True # EA için
+                            elif "background" in html_content and ("green" in html_content or "#90ff90" in html_content): is_active = True
+                            elif "available" in text_content: is_active = True
+                            
+                            if is_active:
+                                games.append(game_name)
 
-                    # Koşul kontrolü
-                    all_cells = row.find_elements(By.XPATH, "./*")
-                    if len(all_cells) > target_idx:
-                        target_cell = all_cells[target_idx]
-                        cell_html = target_cell.get_attribute('innerHTML')
-                        
-                        # Kullanıcının verdiği class/kod kontrolü
-                        if match_string in cell_html:
-                            games.append(name)
-
-            except: continue 
+            except Exception as e:
+                continue # Tablo bozuksa sonrakine geç
 
     except Exception as e:
         print(f"   ❌ Hata: {e}")
     finally:
-        if driver: driver.quit()
+        driver.quit()
         
     unique = sorted(list(set(games)))
-    print(f"   ✅ '{target_col_name}' -> {len(unique)} oyun.")
+    print(f"   ✅ Toplanan: {len(unique)} oyun")
     return unique
 
 def load_existing_data():
@@ -128,48 +135,53 @@ def load_existing_data():
     return {"Game Pass": [], "EA Play": [], "EA Play Pro": [], "Ubisoft+": []}
 
 def main():
-    print("🤖 --- ROBOT BAŞLATILIYOR (V10 - ANTI-FREEZE) ---")
+    print("🤖 --- ROBOT BAŞLATILIYOR (V11 - DEEP SCAN) ---")
     final_data = load_existing_data()
     
     # 1. GAME PASS
     print("\n1️⃣ Game Pass...")
-    gp = scrape_with_timeout(
+    gp = scrape_universal(
         "https://www.pcgamingwiki.com/wiki/List_of_PC_Game_Pass_games", 
-        "game pass for pc", "tickcross-true"
+        "game pass for pc", 
+        check_green=True
     )
-    if len(gp) > 10: final_data["Game Pass"] = gp
+    if len(gp) > 100: final_data["Game Pass"] = gp
 
-    # 2. EA PLAY
-    print("\n2️⃣ EA Play...")
-    ea_play = scrape_with_timeout(
-        "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", 
-        "ea app", "store-origin"
-    )
-    if len(ea_play) > 5: final_data["EA Play"] = ea_play
-
-    # 3. EA PLAY PRO
-    print("\n3️⃣ EA Play Pro...")
-    ea_pro = scrape_with_timeout(
-        "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", 
-        "ea play pro", "store-origin"
-    )
-    manual_pro = ["FC 26", "FC 25", "F1 24", "Madden NFL 25", "Star Wars Jedi: Survivor"]
-    if len(ea_pro) > 2:
-        final_data["EA Play Pro"] = list(set(ea_pro + manual_pro))
-    else:
-        # Hata olursa eskiyi koru + manuel
-        existing = final_data.get("EA Play Pro", [])
-        final_data["EA Play Pro"] = list(set(existing + manual_pro))
-
-    # 4. UBISOFT+
-    print("\n4️⃣ Ubisoft+...")
-    ubi = scrape_with_timeout(
+    # 2. UBISOFT+ (Düz Liste Modu)
+    print("\n2️⃣ Ubisoft+...")
+    # Ubisoft sayfasında sütun kontrolü yapmadan tabloyu süpür
+    ubi = scrape_universal(
         "https://www.pcgamingwiki.com/wiki/List_of_Ubisoft%2B_games", 
-        "game", "", is_ubisoft=True
+        "", 
+        check_green=False 
     )
     if len(ubi) > 10: final_data["Ubisoft+"] = ubi
 
-    # Zaman Damgası
+    # 3. EA PLAY (Basic)
+    print("\n3️⃣ EA Play...")
+    ea_play = scrape_universal(
+        "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", 
+        "ea app", 
+        check_green=True
+    )
+    if len(ea_play) > 10: final_data["EA Play"] = ea_play
+    
+    # 4. EA PLAY PRO
+    print("\n4️⃣ EA Play Pro...")
+    ea_pro = scrape_universal(
+        "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", 
+        "ea play pro", 
+        check_green=True
+    )
+    
+    # Pro listesi bazen az çekilebilir, manuel destek ekleyelim
+    manual_pro = ["FC 26", "FC 25", "F1 24", "Madden NFL 25", "Star Wars Jedi: Survivor"]
+    combined_pro = list(set(ea_pro + manual_pro))
+    
+    if len(combined_pro) > 5:
+        final_data["EA Play Pro"] = combined_pro
+
+    # ZAMAN DAMGASI
     final_data["_meta"] = {
         "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
