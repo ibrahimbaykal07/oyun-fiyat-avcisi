@@ -11,7 +11,7 @@ PAGE_SIZE = 12
 PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
 
 # --- 2. GÖMÜLÜ LOGOLAR (BASE64) ---
-ICON_GAMEPASS = "data:image/png;base64,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"
+ICON_GAMEPASS = "data:image/png;base64,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"
 ICON_EA = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0ZGODU1NSI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTMuNSA3aC0zLjV2Mi41aDN2MS41aC0zVjE2aDN2MS41aC00LjVWOGg0LjV6bS02IDBoLTMuNXY4aDQuNXYtMS41aC0zdi0yLjVoM3YtMS41aC0zVjkuNWgzLjV6Ii8+PC9zdmc+"
 ICON_UBI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwOTlGRiI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMTcuNWMtMy4wMyAwLTUuNS0yLjQ3LTUuNS01LjVTOC45NyA5IDEyIDlzNS41IDIuNDcgNS41IDUuNS0yLjQ3IDUuNS01LjUgNS41em0wLTljLTEuOTMgMC0zLjUgMS41Ny0zLjUgMy41UzEwLjA3IDE1IDEyIDE1czMuNS0xLjU3IDMuNS0zLjUtMS41Ny0zLjUtMy41LTMuNXoiLz48L3N2Zz4="
 
@@ -37,18 +37,14 @@ st.markdown("""
     .vitrin-date { font-size: 0.75em; color: #666; margin-bottom: 5px; font-style: italic; }
     .detail-title { font-family: sans-serif; font-size: 2.5em; font-weight: 800; margin-bottom: 10px; color: #FFFFFF !important; line-height: 1.2; text-shadow: 0 0 10px rgba(0,0,0,0.5); }
     .desc-box { background-color: transparent; color: #FFFFFF !important; padding: 0; border: none; line-height: 1.6; font-size: 1.05em; margin-bottom: 20px; }
-    
-    /* ROZETLER */
     .badge-container { display: inline-block; padding: 6px 12px; border-radius: 6px; font-family: sans-serif; font-weight: 800; font-size: 0.85em; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .badge-gamepass { background-color: #107C10; color: white; border: 1px solid #0e6f0e; }
     .badge-eapro { background: linear-gradient(135deg, #ff8c00, #ff0080); color: white; border: 1px solid #e67e00; }
     .badge-ea { background-color: #FF4747; color: white; border: 1px solid #e03e3e; }
     .badge-ubi { background-color: #0099FF; color: white; border: 1px solid #0088e0; }
-    
     .sub-card { display: flex; align-items: center; background: linear-gradient(90deg, #1c1c1c, #2a2a2a); border-left: 5px solid #555; padding: 10px 15px; border-radius: 0 8px 8px 0; margin-top: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: white; font-family: sans-serif; width: fit-content; }
     .sub-icon { width: 24px; height: 24px; margin-right: 10px; }
     .sub-text { font-weight: bold; font-size: 0.9em; letter-spacing: 0.5px; text-transform: uppercase; }
-    
     .req-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; font-size: 0.9em; height: 100%; }
     .req-title { font-weight: bold; margin-bottom: 10px; color: #333; font-size: 1.1em; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
     .price-big { font-size: 1.2em; font-weight: bold; color: #28a745; }
@@ -58,20 +54,21 @@ st.markdown("""
     .meta-red { background-color: #f00; }
     .user-blue { background-color: #1b2838; border: 1px solid #66c0f4; color: #66c0f4; }
     .stButton button { width: 100%; }
-    
-    /* Pager Butonları */
     div[data-testid="column"] button { min-width: 40px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. VERİTABANI YÜKLEME ---
+# --- 4. VERİTABANI YÜKLEME (CRITICAL FIX) ---
 def load_subscriptions():
     try:
         with open('subscriptions.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
-            if "_meta" in data: del data["_meta"]
+            # Robotun attığı _meta bilgisini temizle ki site bozulmasın
+            if "_meta" in data:
+                del data["_meta"]
             return data
-    except:
+    except Exception as e:
+        # Hata durumunda boş şablon (Sitenin çökmemesi için)
         return {"Game Pass": [], "EA Play Pro": [], "EA Play": [], "Ubisoft+": []}
 
 SUBSCRIPTIONS = load_subscriptions()
@@ -292,7 +289,7 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
         except: pass
     return results
 
-# ================= ARAYÜZ =================
+# ================= ARAYÜZ BAŞLIYOR =================
 scroll_to_top()
 dolar_kuru = get_dollar_rate()
 
@@ -300,15 +297,12 @@ h1, h2, h3 = st.columns([1.5, 4, 1.5])
 with h1:
     if st.button("🏠 Ana Sayfa"): go_home()
 with h2:
-    # 1. Satır: Kategoriler
     c1, c2, c3 = st.columns(3)
     if c1.button("🏆 Popüler"): go_category("En Popüler", "Metacritic", 0)
     if c2.button("🔥 İndirim"): go_category("Süper İndirimler", "Savings", 1)
     if c3.button("✨ Yeni"): go_category("Yeni Çıkanlar", "Release", 0)
     
-    st.write("") # Boşluk
-    
-    # 2. Satır: Abonelikler
+    st.write("")
     s1, s2, s3, s4 = st.columns(4)
     if s1.button("Game Pass"): go_category("Game Pass", None, None, True)
     if s2.button("EA Play"): go_category("EA Play", None, None, True)
@@ -383,14 +377,22 @@ elif st.session_state.active_page == 'category':
             st.write("")
         
         st.markdown("---")
-        # --- NUMARALI SAYFALAMA ---
         if total_pages > 1:
-            cols = st.columns(min(total_pages, 10))
-            for p in range(total_pages):
-                if p < 10:
-                    with cols[p]:
-                        b_type = "primary" if p == curr_page else "secondary"
-                        if st.button(str(p+1), key=f"page_{p}", type=b_type): set_page_num(p)
+            # Akıllı Pagination: Max 10 sayfa göster
+            display_range = 10
+            start_p = max(0, curr_page - 4)
+            end_p = min(total_pages, start_p + display_range)
+            
+            # Kolonları oluştur
+            cols = st.columns(end_p - start_p)
+            
+            for i in range(start_p, end_p):
+                col_idx = i - start_p
+                with cols[col_idx]:
+                    b_type = "primary" if i == curr_page else "secondary"
+                    # Buton etiketini [1], [2] formatında yap
+                    if st.button(f"{i + 1}", key=f"pg_{i}", type=b_type):
+                        set_page_num(i)
     else: st.info("Bu sayfada oyun yok.")
 
 # SAYFA: DETAY
@@ -402,8 +404,8 @@ elif st.session_state.active_page == 'detail':
         st.image(game['thumb'], use_container_width=True)
         sub_n, sub_cls = check_subscription(game['title'])
         if sub_n:
-            label = SUB_BTN_LABELS.get(sub_n, sub_n + " DAHİL")
-            if st.button(label, use_container_width=True): go_category(sub_n, None, None, True)
+            st.markdown(f"""<span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>""", unsafe_allow_html=True)
+            if st.button(f"Tüm {sub_n} Listesi", key="sub_link"): go_category(sub_n, None, None, True)
     with c2:
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
         mc = get_meta_color(game['meta'])
@@ -435,8 +437,8 @@ elif st.session_state.active_page == 'detail':
                         icon = "▶️ Oynat" if item['type'] == 'video' else "🔍 Büyüt"
                         if st.button(f"{icon}", key=f"gal_{idx}", use_container_width=True): show_gallery_modal(media_list, start_idx=idx)
             st.write("")
-    st.write("")
     if req_min != "Bilgi yok.":
+        st.write("")
         st.subheader("💻 Sistem Gereksinimleri")
         rq1, rq2 = st.columns(2)
         with rq1:
@@ -487,7 +489,6 @@ elif st.session_state.active_page == 'search':
                 price_final = int(p_usd) if s_name in ["Steam", "Epic Games"] else int(p_usd * dolar_kuru)
                 grouped[title]["offers"].append({"store": s_name, "price": price_final, "link": final_link})
         
-        # Manuel Ekleme
         if not grouped:
             for sub, games in SUBSCRIPTIONS.items():
                 for g_name in games:
@@ -508,8 +509,8 @@ elif st.session_state.active_page == 'search':
                         st.subheader(game['title'])
                         sub_n, sub_cls = check_subscription(game['title'])
                         if sub_n:
-                            label = SUB_BTN_LABELS.get(sub_n, sub_n + " DAHİL")
-                            if st.button(label, key=f"src_sub_{game['title']}", use_container_width=True): go_category(sub_n, None, None, True)
+                            st.markdown(f"<span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>", unsafe_allow_html=True)
+                            if st.button(f"Tüm {sub_n} Listesi", key=f"src_sub_{game['title']}"): go_category(sub_n, None, None, True)
                         st.write("")
                         if game['meta']>0: 
                             mc=get_meta_color(game['meta'])
