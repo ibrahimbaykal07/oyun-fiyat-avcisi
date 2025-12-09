@@ -9,6 +9,9 @@ st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout=
 PAGE_SIZE = 12
 PLACEHOLDER_IMG = "https://placehold.co/600x900/222/FFF/png?text=Gorsel+Yok"
 
+# --- RAWG API AYARLARI ---
+RAWG_API_KEY = "3f8159cbaaac426bac87a770371c941f" # Senin anahtarın
+
 # --- 2. GÖMÜLÜ LOGOLAR ---
 ICON_GAMEPASS = "data:image/png;base64,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"
 ICON_EA = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0ZGODU1NSI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTMuNSA3aC0zLjV2Mi41aDN2MS41aC0zVjE2aDN2MS41aC00LjVWOGg0LjV6bS02IDBoLTMuNXY4aDQuNXYtMS41aC0zdi0yLjVoM3YtMS41aC0zVjkuNWgzLjV6Ii8+PC9zdmc+"
@@ -28,6 +31,8 @@ except ImportError:
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; }
+    
+    /* Genel */
     .kur-kutusu { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #495057; font-size: 0.9em; text-align: center; border: 1px solid #dee2e6; }
     div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 2/3; object-fit: cover; }
     .vitrin-title { font-size: 0.9em; font-weight: bold; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
@@ -118,9 +123,29 @@ def show_gallery_modal(media_list, start_idx=0):
         st.caption(f"📷 Görsel {idx + 1} / {len(media_list)}")
     st.markdown(f"<div style='text-align:center; color:#888; font-size:0.8em;'>Diğer medyaya geçmek için yukarıdaki kaydırıcıyı kullanın.</div>", unsafe_allow_html=True)
 
+# --- RAWG API FONKSİYONU (YENİ) ---
+@st.cache_data(ttl=3600) # 1 saat önbellekte tut
+def fetch_rawg_data(game_name):
+    """RAWG API'den Resim ve Meta Verisi Çeker"""
+    try:
+        url = f"https://api.rawg.io/api/games?key={RAWG_API_KEY}&search={game_name}&page_size=1"
+        r = requests.get(url, timeout=3)
+        if r.status_code == 200:
+            data = r.json()
+            if data['results']:
+                game = data['results'][0]
+                return {
+                    "image": game.get('background_image'), # Yüksek Kaliteli Resim
+                    "meta": game.get('metacritic'),
+                    "released": game.get('released')
+                }
+    except: pass
+    return None
+
 def get_dollar_rate():
     try:
         r = requests.get("https://www.tcmb.gov.tr/kurlar/today.xml", timeout=2)
+        from xml.etree import ElementTree as ET
         root = ET.fromstring(r.content)
         for c in root.findall('Currency'):
             if c.get('Kod') == 'USD': return float(c.find('ForexSelling').text)
@@ -275,6 +300,7 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
         return results
     except: return []
 
+# --- RAWG İLE GÜÇLENDİRİLMİŞ VERİ ÇEKİCİ ---
 def fetch_sub_games(sub_name, page=0, page_size=12):
     game_names = SUBSCRIPTIONS.get(sub_name, [])
     start = page * page_size
@@ -283,38 +309,39 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
     results = []
     
     for name in batch:
-        # Varsayılan Oyun Objesi (Hatasız)
+        # Varsayılan Obje (Garantili)
         game_obj = {
             "title": name,
             "thumb": PLACEHOLDER_IMG,
             "meta": 0,
             "user": 0,
-            "dealID": None,
+            "dealID": f"man_{name.replace(' ', '_')}", # Çakışmayı önlemek için benzersiz ID
             "steamAppID": "0",
-            "price": "---",
+            "price": "---", # Fiyat yoksa çizgi
             "discount": 0.0,
             "store": sub_name,
             "offers": []
         }
         
-        # API'den Veri Çek (Hata Korumalı)
+        # 1. RAWG API'den Görsel Çek (ÖNCELİKLİ)
+        rawg_data = fetch_rawg_data(name)
+        if rawg_data and rawg_data.get('image'):
+            game_obj["thumb"] = rawg_data['image']
+            if rawg_data.get('meta'): game_obj["meta"] = rawg_data['meta']
+        
+        # 2. CheapShark'tan Fiyat Çek (Yedek)
+        # Fiyat varsa ekle, yoksa RAWG resmiyle devam et
         try:
             search_name = name.split(':')[0] if ':' in name else name 
             url = f"https://www.cheapshark.com/api/1.0/deals?title={search_name}&exact=0&limit=1"
-            r = requests.get(url, timeout=1.0) # Çok kısa timeout, donmayı engeller
-            
+            r = requests.get(url, timeout=1.5)
             if r.status_code == 200:
                 data = r.json()
                 if data:
                     d = data[0]
-                    # İsim benzerliği kontrolü (Alakasız oyun gelmesin)
                     if search_name.lower() in d['title'].lower():
                         price_tl = int(float(d['salePrice']) * dolar_kuru)
                         game_obj.update({
-                            "title": d['title'],
-                            "thumb": get_game_image(d),
-                            "meta": int(d['metacriticScore']),
-                            "user": int(d['steamRatingPercent']),
                             "dealID": d['dealID'],
                             "steamAppID": d.get('steamAppID'),
                             "price": price_tl,
@@ -322,9 +349,14 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
                             "store": "Steam" if d['storeID'] == "1" else "Epic",
                             "offers": [{"store": "Mağaza", "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}"}]
                         })
+                        # Eğer RAWG resim bulamadıysa CheapShark resmini kullan
+                        if game_obj["thumb"] == PLACEHOLDER_IMG:
+                            game_obj["thumb"] = get_game_image(d)
+                            
         except: pass
         
         results.append(game_obj)
+        
     return results
 
 # ================= ARAYÜZ BAŞLIYOR =================
@@ -382,7 +414,8 @@ if st.session_state.active_page == 'home':
                         c_p, c_d = st.columns([2, 1])
                         c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
-                        # BENZERSİZ KEY (Sıra Numaralı)
+                        
+                        # BENZERSİZ KEY (MATEMATİKSEL)
                         if st.button("İncele", key=f"home_btn_{limit_key}_{i}_{j}"): go_detail(g)
             st.write("")
         if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"): increase_home_limit(limit_key)
@@ -412,7 +445,7 @@ elif st.session_state.active_page == 'category':
                         st.image(g['thumb'], use_container_width=True)
                         st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
-                        # BENZERSİZ KEY (Sayfa ve Sıra Numaralı)
+                        # BENZERSİZ KEY (ID + INDEX)
                         btn_key = f"cat_btn_{curr_page}_{i}_{j}"
                         if st.button("İncele", key=btn_key): go_detail(g)
             st.write("")
@@ -430,18 +463,24 @@ elif st.session_state.active_page == 'category':
 # SAYFA: DETAY
 elif st.session_state.active_page == 'detail':
     game = st.session_state.selected_game
+    # RAWG'dan çekilen resim varsa onu kullan
+    display_thumb = game.get('thumb', PLACEHOLDER_IMG)
+    if display_thumb == PLACEHOLDER_IMG: # Eğer hala placeholder ise tekrar dene
+        rawg_data = fetch_rawg_data(game['title'])
+        if rawg_data and rawg_data.get('image'): display_thumb = rawg_data['image']
+
     desc, media_list, req_min, req_rec = get_steam_details_turkish(game.get('steamAppID'))
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
-        st.image(game['thumb'], use_container_width=True)
+        st.image(display_thumb, use_container_width=True)
         sub_n, sub_cls = check_subscription(game['title'])
         if sub_n:
             st.markdown(f"<span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>", unsafe_allow_html=True)
             if st.button(f"Tüm {sub_n} Listesi", key="sub_link"): go_category(sub_n, None, None, True)
     with c2:
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
-        mc = get_meta_color(game['meta'])
-        st.markdown(f"""<div style="margin-bottom:15px;"><span class='score-badge {mc}'>Metacritic: {game['meta']}</span><span class='score-badge user-blue'>Steam User: %{game['user']}</span></div>""", unsafe_allow_html=True)
+        mc = get_meta_color(game.get('meta', 0))
+        st.markdown(f"""<div style="margin-bottom:15px;"><span class='score-badge {mc}'>Metacritic: {game.get('meta', 0)}</span><span class='score-badge user-blue'>Steam User: %{game.get('user', 0)}</span></div>""", unsafe_allow_html=True)
         if desc: st.markdown(f"<div class='desc-box'>{desc}</div>", unsafe_allow_html=True)
         st.write("### 🏷️ Mağaza Fiyatları")
         offers = game.get('offers', [])
@@ -525,8 +564,10 @@ elif st.session_state.active_page == 'search':
             for sub, games in SUBSCRIPTIONS.items():
                 for g_name in games:
                     if term.lower() in g_name.lower():
+                        rawg_data = fetch_rawg_data(g_name)
+                        thumb = rawg_data['image'] if rawg_data and rawg_data['image'] else PLACEHOLDER_IMG
                         grouped[g_name.title()] = {
-                            "title": g_name.title(), "thumb": PLACEHOLDER_IMG,
+                            "title": g_name.title(), "thumb": thumb,
                             "meta": 0, "user": 0, "sort_score": 0, "offers": [], "steamAppID": "0"
                         }
 
@@ -561,7 +602,8 @@ elif st.session_state.active_page == 'search':
                                 with cc3: st.link_button("Git", off['link'])
                                 st.divider()
                         else: st.caption("Henüz mağaza fiyatı yok.")
-                        # BENZERSİZ KEY (Arama Sonucu)
+                        
+                        # BENZERSİZ KEY
                         if st.button("🔍 Detaylı İncele", key=f"src_dt_{game['title']}_{i}"): go_detail(game)
                     st.markdown("---")
         else: st.warning("Sonuç bulunamadı.")
