@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import streamlit.components.v1 as components
 from datetime import datetime
+import re
 import math
 
 # --- 1. AYARLAR ---
@@ -277,6 +278,41 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
         return results
     except: return []
 
+# --- AKILLI FİYAT AVCISI (V72 - MULTI-TRY) ---
+@st.cache_data(ttl=3600)
+def fetch_price_smart(game_name):
+    """
+    Oyunun fiyatını bulmak için ismin farklı varyasyonlarını dener.
+    Bulamazsa '---' döner ama hata vermez.
+    """
+    # Denenecek isim varyasyonları
+    search_candidates = [
+        game_name, # Orijinal: Call of Duty: Black Ops 6
+        re.sub(r'[^\w\s]', '', game_name), # Noktalamasız: Call of Duty Black Ops 6
+        game_name.split(':')[0], # İlk kısım: Call of Duty
+        re.sub(r'\(\d{4}\)', '', game_name).strip() # Yılsız: Forza Motorsport
+    ]
+    
+    # Özel durumlar
+    if "fc 26" in game_name.lower(): return None # Çıkmadı
+    
+    for query in list(set(search_candidates)): # Tekrarları sil
+        if len(query) < 3: continue
+        try:
+            url = f"https://www.cheapshark.com/api/1.0/deals?title={query}&exact=0&limit=1"
+            r = requests.get(url, timeout=3) # Timeout artırıldı
+            if r.status_code == 200:
+                data = r.json()
+                if data:
+                    d = data[0]
+                    # Basit doğrulama (Alakasız oyun gelmesin)
+                    # Aranan kelimenin en az bir parçası sonuçta geçmeli
+                    if query.split()[0].lower() in d['title'].lower():
+                        return d
+        except: pass
+    
+    return None
+
 def fetch_sub_games(sub_name, page=0, page_size=12):
     game_names = SUBSCRIPTIONS.get(sub_name, [])
     start = page * page_size
@@ -285,7 +321,7 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
     results = []
     
     for i, name in enumerate(batch):
-        # Varsayılan Obje (Hatasız)
+        # Varsayılan Obje (Garantili)
         game_obj = {
             "title": name,
             "thumb": PLACEHOLDER_IMG,
@@ -295,32 +331,24 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
             "price": "---", "discount": 0.0, "store": sub_name, "offers": []
         }
         
-        # CheapShark'tan Veri Çek
-        try:
-            search_name = name.split(':')[0] if ':' in name else name 
-            url = f"https://www.cheapshark.com/api/1.0/deals?title={search_name}&exact=0&limit=1"
-            r = requests.get(url, timeout=2) # Timeout artırıldı
-            if r.status_code == 200:
-                data = r.json()
-                if data:
-                    d = data[0]
-                    # İsim benzerliği kontrolü
-                    if search_name.lower() in d['title'].lower():
-                        price_tl = int(float(d['salePrice']) * dolar_kuru)
-                        game_obj.update({
-                            "title": d['title'],
-                            "thumb": get_game_image(d),
-                            "meta": int(d['metacriticScore']),
-                            "user": int(d['steamRatingPercent']),
-                            "dealID": d['dealID'],
-                            "steamAppID": d.get('steamAppID'),
-                            "price": price_tl,
-                            "discount": float(d['savings']),
-                            "store": "Steam" if d['storeID'] == "1" else "Epic",
-                            "offers": [{"store": "Mağaza", "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}"}]
-                        })
-        except: pass
+        # Akıllı Fiyat Sorgusu
+        deal_data = fetch_price_smart(name)
         
+        if deal_data:
+            price_tl = int(float(deal_data['salePrice']) * dolar_kuru)
+            game_obj.update({
+                "title": deal_data['title'], # API'den gelen gerçek isim
+                "thumb": get_game_image(deal_data),
+                "meta": int(deal_data['metacriticScore']),
+                "user": int(deal_data['steamRatingPercent']),
+                "dealID": deal_data['dealID'],
+                "steamAppID": deal_data.get('steamAppID'),
+                "price": price_tl,
+                "discount": float(deal_data['savings']),
+                "store": "Steam" if deal_data['storeID'] == "1" else "Epic",
+                "offers": [{"store": "Mağaza", "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={deal_data['dealID']}"}]
+            })
+            
         results.append(game_obj)
     return results
 
@@ -379,6 +407,7 @@ if st.session_state.active_page == 'home':
                         c_p, c_d = st.columns([2, 1])
                         c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
+                        # BENZERSİZ KEY (Sıra Numaralı)
                         if st.button("İncele", key=f"home_btn_{limit_key}_{i}_{j}"): go_detail(g)
             st.write("")
         if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"): increase_home_limit(limit_key)
@@ -408,6 +437,7 @@ elif st.session_state.active_page == 'category':
                         st.image(g['thumb'], use_container_width=True)
                         st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
+                        # BENZERSİZ KEY (Sayfa + Satır + Sütun)
                         if st.button("İncele", key=f"cat_btn_{curr_page}_{i}_{j}"): go_detail(g)
             st.write("")
         st.markdown("---")
@@ -518,8 +548,10 @@ elif st.session_state.active_page == 'search':
             for sub, games in SUBSCRIPTIONS.items():
                 for g_name in games:
                     if term.lower() in g_name.lower():
+                        data = fetch_price_smart(g_name)
+                        thumb = get_game_image(data) if data else PLACEHOLDER_IMG
                         grouped[g_name.title()] = {
-                            "title": g_name.title(), "thumb": PLACEHOLDER_IMG,
+                            "title": g_name.title(), "thumb": thumb,
                             "meta": 0, "user": 0, "sort_score": 0, "offers": [], "steamAppID": "0"
                         }
 
