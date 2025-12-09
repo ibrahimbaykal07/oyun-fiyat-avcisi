@@ -1,109 +1,118 @@
 import json
-import requests
-from bs4 import BeautifulSoup
-import os
+import time
+import os # BU EKSİKTİ, EKLENDİ
 import re
 from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 # --- AYARLAR ---
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-}
 FILE_NAME = "subscriptions.json"
 
+def setup_driver():
+    """GitHub Actions Uyumlu Sürücü Ayarları"""
+    chrome_options = Options()
+    chrome_options.add_argument("--headless") 
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--blink-settings=imagesEnabled=false")
+    chrome_options.page_load_strategy = 'eager'
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    
+    # OTOMATİK SÜRÜCÜ KURULUMU
+    service = Service(ChromeDriverManager().install())
+    return webdriver.Chrome(service=service, options=chrome_options)
+
 def clean_name(name):
-    # Dipnotları temizle
     name = re.sub(r'\[.*?\]', '', name)
     name = re.sub(r'\(.*?\)', '', name)
     return name.strip()
 
-def scrape_pcgw_fast(url, target_col_name):
-    """
-    Hızlı ve Agresif Tarama (Requests + BS4)
-    """
+def scrape_specific_condition(url, target_col_name, match_string, is_ubisoft=False):
     print(f"   🚀 Bağlanılıyor -> {url}")
     games = []
+    driver = None
     
     try:
-        response = requests.get(url, headers=HEADERS, timeout=20)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        driver = setup_driver()
+        driver.set_page_load_timeout(60)
         
-        # Tüm tabloları bul
-        tables = soup.find_all('table', {'class': 'wikitable'})
-        print(f"   ℹ️ {len(tables)} tablo bulundu.")
-        
-        for table in tables:
-            # Sütun başlıklarını bul
-            headers = [th.get_text(strip=True).lower() for th in table.find_all('th')]
-            
-            # Hedef sütun kaçıncı sırada?
-            target_idx = -1
-            for i, h in enumerate(headers):
-                if target_col_name.lower() in h:
-                    target_idx = i
-                    break
-            
-            if target_idx == -1: 
-                continue # Bu tabloda aradığımız sütun yok, geç.
+        try:
+            driver.get(url)
+        except:
+            print("   ⚠️ Sayfa yükleme zaman aşımı (devam ediliyor)...")
+            driver.execute_script("window.stop();")
 
-            # Satırları gez
-            rows = table.find_all('tr')
-            for row in rows[1:]:
-                cols = row.find_all(['td', 'th'])
+        try:
+            WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME, "wikitable")))
+        except:
+            print("   ⚠️ Tablo bulunamadı.")
+
+        tables = driver.find_elements(By.CLASS_NAME, "wikitable")
+        print(f"   ℹ️ {len(tables)} tablo taraniyor...")
+
+        for table in tables:
+            try:
+                headers = table.find_elements(By.TAG_NAME, "th")
+                col_map = {}
+                for i, h in enumerate(headers):
+                    col_map[i] = h.text.strip().lower()
                 
-                # Oyun ismi genelde ilk hücredir
-                if not cols: continue
+                target_idx = -1
+                if is_ubisoft:
+                    target_idx = 0 
+                else:
+                    for idx, text in col_map.items():
+                        if target_col_name.lower() in text:
+                            target_idx = idx
+                            break
                 
-                # Sütun sayısı tutuyor mu?
-                # Not: Bazen TH kullanıldığı için index kayabilir, ama genelde 
-                # wiki tablolarında tüm hücreler TD veya TH olarak sıralıdır.
-                # Ancak 'Game' sütunu TH ise, cells listesinde o da vardır.
-                
-                # Basit kontrol: Satırdaki toplam hücre sayısı hedeften büyük olmalı
-                if len(cols) <= target_idx: continue
-                
-                # Hedef hücreye bak (Yeşil mi?)
-                target_cell = cols[target_idx]
-                classes = target_cell.get('class', [])
-                style = target_cell.get('style', '')
-                text = target_cell.get_text(strip=True).lower()
-                
-                is_active = False
-                if 'table-yes' in classes: is_active = True
-                elif 'background' in str(style) and ('#90ff90' in str(style) or 'lightgreen' in str(style)): is_active = True
-                elif text == 'available': is_active = True
-                
-                if is_active:
-                    name = clean_name(cols[0].get_text(strip=True))
-                    if len(name) > 1:
+                if target_idx == -1: continue 
+
+                rows = table.find_elements(By.TAG_NAME, "tr")
+                for row in rows[1:]:
+                    cells = row.find_elements(By.TAG_NAME, "td")
+                    
+                    # Oyun İsmi
+                    try:
+                        # Bazı tablolarda isim TH içindedir
+                        name_el = row.find_elements(By.XPATH, "./*[1]")[0]
+                        name = clean_name(name_el.text)
+                    except: continue
+
+                    if not name: continue
+
+                    if is_ubisoft:
                         games.append(name)
+                        continue
+
+                    # Koşul Kontrolü
+                    all_cells = row.find_elements(By.XPATH, "./*")
+                    if len(all_cells) > target_idx:
+                        target_cell = all_cells[target_idx]
+                        cell_html = target_cell.get_attribute('innerHTML')
+                        
+                        if match_string in cell_html:
+                            games.append(name)
+
+            except Exception as inner_e:
+                continue 
 
     except Exception as e:
-        print(f"   ❌ Hata: {e}")
+        print(f"   ❌ Genel Hata: {e}")
+    finally:
+        if driver: driver.quit()
         
     unique = sorted(list(set(games)))
-    print(f"   ✅ Toplanan: {len(unique)}")
+    print(f"   ✅ '{target_col_name}' için {len(unique)} oyun bulundu.")
     return unique
-
-def scrape_ubisoft_fast():
-    # Ubisoft için özel basit fonksiyon (Sadece isimleri al)
-    print("   🚀 Ubisoft+ Taranıyor...")
-    games = []
-    try:
-        url = "https://www.pcgamingwiki.com/wiki/List_of_Ubisoft%2B_games"
-        response = requests.get(url, headers=HEADERS)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        tables = soup.find_all('table', {'class': 'wikitable'})
-        
-        for table in tables:
-            for row in table.find_all('tr')[1:]:
-                cols = row.find_all(['td', 'th'])
-                if cols:
-                    name = clean_name(cols[0].get_text(strip=True))
-                    if len(name) > 1: games.append(name)
-    except: pass
-    print(f"   ✅ Toplanan: {len(games)}")
-    return list(set(games))
 
 def load_existing_data():
     if os.path.exists(FILE_NAME):
@@ -114,45 +123,63 @@ def load_existing_data():
     return {"Game Pass": [], "EA Play": [], "EA Play Pro": [], "Ubisoft+": []}
 
 def main():
-    print("🤖 --- ROBOT BAŞLATILIYOR (V59 - FAST & FURIOUS) ---")
+    print("🤖 --- ROBOT BAŞLATILIYOR (V60 - FIXED IMPORTS) ---")
     
-    # 1. Verileri Çek
+    final_data = load_existing_data()
+    
+    # 1. GAME PASS
     print("\n1️⃣ Game Pass...")
-    gp = scrape_pcgw_fast("https://www.pcgamingwiki.com/wiki/List_of_PC_Game_Pass_games", "Game Pass for PC")
-    
-    # KONTROL NOKTASI: Eğer Game Pass boşsa işlemi durdur (HATA VER)
-    if len(gp) < 50:
-        raise Exception(f"❌ HATA: Game Pass listesi çekilemedi! Sadece {len(gp)} oyun bulundu.")
+    gp = scrape_specific_condition(
+        "https://www.pcgamingwiki.com/wiki/List_of_PC_Game_Pass_games", 
+        "game pass for pc", 
+        "tickcross-true"
+    )
+    if len(gp) > 10: final_data["Game Pass"] = gp
 
-    print("\n2️⃣ EA Play (Basic)...")
-    ea_play = scrape_pcgw_fast("https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", "EA App")
-    
+    # 2. EA PLAY (BASIC)
+    print("\n2️⃣ EA Play...")
+    ea_play = scrape_specific_condition(
+        "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", 
+        "ea app", 
+        "store-origin"
+    )
+    if len(ea_play) > 5: final_data["EA Play"] = ea_play
+
+    # 3. EA PLAY PRO
     print("\n3️⃣ EA Play Pro...")
-    ea_pro = scrape_pcgw_fast("https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", "EA Play Pro")
-    
-    # Manuel Pro Destek
+    ea_pro = scrape_specific_condition(
+        "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games", 
+        "ea play pro", 
+        "store-origin"
+    )
+    # Manuel destek (FC 26 vb. henüz listede yoksa ekle)
     manual_pro = ["FC 26", "FC 25", "F1 24", "Madden NFL 25", "Star Wars Jedi: Survivor"]
-    ea_pro = list(set(ea_pro + manual_pro))
+    
+    if len(ea_pro) > 2:
+        final_data["EA Play Pro"] = list(set(ea_pro + manual_pro))
+    else:
+        existing = final_data.get("EA Play Pro", [])
+        final_data["EA Play Pro"] = list(set(existing + manual_pro))
 
+    # 4. UBISOFT+
     print("\n4️⃣ Ubisoft+...")
-    ubi = scrape_ubisoft_fast()
+    ubi = scrape_specific_condition(
+        "https://www.pcgamingwiki.com/wiki/List_of_Ubisoft%2B_games", 
+        "game", 
+        "", 
+        is_ubisoft=True
+    )
+    if len(ubi) > 10: final_data["Ubisoft+"] = ubi
 
-    # Hepsini Birleştir
-    final_data = {
-        "Game Pass": gp,
-        "EA Play": ea_play,
-        "EA Play Pro": ea_pro,
-        "Ubisoft+": ubi,
-        "_meta": {
-            "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+    # Zaman Damgası
+    final_data["_meta"] = {
+        "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     
-    # Kaydet
     with open(FILE_NAME, 'w', encoding='utf-8') as f:
         json.dump(final_data, f, ensure_ascii=False, indent=4)
         
-    print("\n🎉 BAŞARILI! Dosya yazıldı.")
+    print("\n🎉 İşlem Tamamlandı.")
 
 if __name__ == "__main__":
     main()
