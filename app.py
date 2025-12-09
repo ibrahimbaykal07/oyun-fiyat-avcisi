@@ -9,11 +9,12 @@ st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout=
 PAGE_SIZE = 12
 PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
 
-# --- 2. CSS STİLİ (DİKEY GÖRSEL & DÜZEN) ---
+# --- 2. CSS STİLİ ---
 st.markdown("""
 <style>
-    .block-container { padding-top: 2rem; }
+    .block-container { padding-top: 1rem; }
     
+    /* DİKEY GÖRSEL */
     div[data-testid="stImage"] img { 
         border-radius: 8px; 
         width: 100%; 
@@ -21,6 +22,7 @@ st.markdown("""
         object-fit: cover; 
     }
     
+    /* OYUN BAŞLIĞI */
     .game-title { 
         font-size: 0.9em; 
         font-weight: bold; 
@@ -32,18 +34,33 @@ st.markdown("""
         text-align: center;
     }
     
+    /* FİYAT VE İNDİRİM */
+    .price-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        margin: 5px 0;
+    }
     .game-price { 
         font-size: 1.1em; 
         font-weight: bold; 
         color: #28a745; 
-        margin: 2px 0; 
-        text-align: center;
     }
-
+    .discount-tag {
+        background-color: #dc3545;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    
+    /* KATEGORİ BAŞLIĞI */
     .cat-header {
         font-size: 1.5em;
         font-weight: bold;
-        margin-top: 30px;
+        margin-top: 20px;
         margin-bottom: 15px;
         border-bottom: 2px solid #eee;
         padding-bottom: 5px;
@@ -54,7 +71,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. MANUEL ABONELİK LİSTELERİ ---
+# --- 3. MANUEL LİSTE ---
 SUBSCRIPTIONS = {
     "Game Pass": [
         "Call of Duty: Black Ops 6", "Call of Duty: Modern Warfare III", "Diablo IV", "Starfield", 
@@ -92,7 +109,7 @@ SUBSCRIPTIONS = {
 # --- 4. SESSION STATE ---
 if 'active_page' not in st.session_state: st.session_state.active_page = 'home'
 if 'page_number' not in st.session_state: st.session_state.page_number = 0
-if 'selected_cat' not in st.session_state: st.session_state.selected_cat = "Game Pass"
+if 'selected_cat' not in st.session_state: st.session_state.selected_cat = "Popular"
 if 'selected_game' not in st.session_state: st.session_state.selected_game = None
 if 'search_term' not in st.session_state: st.session_state.search_term = ""
 
@@ -106,19 +123,24 @@ def set_page(page_name):
     scroll_to_top()
     st.rerun()
 
+def go_category(cat_key, is_sub=False):
+    st.session_state.selected_cat = cat_key
+    st.session_state.active_page = 'category'
+    st.session_state.page_number = 0
+    scroll_to_top()
+    st.rerun()
+
 def go_detail(game):
     st.session_state.selected_game = game
     st.session_state.active_page = 'detail'
     scroll_to_top()
     st.rerun()
 
-# --- VERİ MOTORU (STEAM TR - DİKEY & ORİJİNAL FİYAT) ---
+# --- VERİ MOTORU (STEAM TR) ---
 @st.cache_data(ttl=3600)
 def fetch_steam_data(game_name):
-    """Steam TR'den Veri Çeker"""
     clean_name = re.sub(r'\(.*?\)', '', game_name).replace(':', '').replace('.', '').strip()
     
-    # FC 26 Manuel
     if "fc 26" in clean_name.lower():
         return {"price": "Henüz Çıkmadı", "thumb": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2195250/library_600x900.jpg", "appid": "0"}
 
@@ -135,9 +157,6 @@ def fetch_steam_data(game_name):
                 price_text = "Ücretsiz"
                 if 'price' in item:
                     val = item['price']['final'] / 100
-                    # Steam API para birimi sembolü vermez, varsayılan $ ekliyoruz (TR artık USD)
-                    # Ancak eski oyunlar TL olabilir, API sadece rakam verir.
-                    # Basitlik için $ varsayıyoruz.
                     price_text = f"${val:.2f}"
                 
                 return {"price": price_text, "thumb": thumb, "appid": appid, "title": item['name']}
@@ -145,55 +164,49 @@ def fetch_steam_data(game_name):
     return None
 
 def get_game_details(game_name, sub_name=""):
-    """Manuel liste için detay hazırlayıcı"""
     data = {
         "title": game_name,
         "thumb": PLACEHOLDER_IMG,
         "price": "---",
         "store": sub_name,
         "appid": "0",
-        "desc": "Açıklama bulunamadı."
+        "discount": 0
     }
-    
     steam_res = fetch_steam_data(game_name)
     if steam_res:
-        data['title'] = steam_res['title'] # Gerçek isimi al
+        data['title'] = steam_res['title']
         data['thumb'] = steam_res['thumb']
         data['price'] = steam_res['price']
         data['appid'] = steam_res['appid']
-    
     return data
 
 @st.cache_data(ttl=3600)
-def fetch_dynamic_deals(category):
-    """
-    CheapShark'tan (Metacritic/Deal/New) listeyi alıp
-    Steam TR fiyatlarıyla eşleştirir.
-    """
+def fetch_dynamic_deals(category, page=0, page_size=24):
+    """CheapShark'tan Vitrin Verisi + İndirim Oranı"""
     sort_map = {"Popular": "Metacritic", "Sale": "Savings", "New": "Release"}
     sort_type = sort_map.get(category, "Metacritic")
     
     try:
-        url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1&sortBy={sort_type}&pageSize=8&pageNumber=0"
-        if category == "New": url += "&desc=1" # Yeniden eskiye
+        url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1&sortBy={sort_type}&pageSize={page_size}&pageNumber={page}"
+        if category == "New": url += "&desc=1"
         if category == "Popular": url += "&metacritic=75"
         
         data = requests.get(url, timeout=3).json()
         results = []
         
         for d in data:
-            # Önce Steam TR'den gerçek veriyi çek
             s_data = fetch_steam_data(d['title'])
             
             final_title = d['title']
-            final_thumb = d.get('thumb', PLACEHOLDER_IMG) # CheapShark'ın yatay resmi (Yedek)
-            final_price = f"${d['salePrice']}" # Global Fiyat (Yedek)
+            final_thumb = d.get('thumb', PLACEHOLDER_IMG)
+            final_price = f"${d['salePrice']}"
             final_appid = d.get('steamAppID', '0')
+            discount = float(d['savings']) # İNDİRİM ORANI BURADA
             
             if s_data:
                 final_title = s_data['title']
-                final_thumb = s_data['thumb'] # Dikey Poster!
-                final_price = s_data['price'] # TR Fiyatı
+                final_thumb = s_data['thumb']
+                final_price = s_data['price']
                 final_appid = s_data['appid']
             
             results.append({
@@ -201,6 +214,7 @@ def fetch_dynamic_deals(category):
                 "thumb": final_thumb,
                 "price": final_price,
                 "appid": final_appid,
+                "discount": discount,
                 "store": "Steam Store"
             })
         return results
@@ -209,24 +223,25 @@ def fetch_dynamic_deals(category):
 # ================= ARAYÜZ =================
 scroll_to_top()
 
-# 1. ÜST MENÜ
+# 1. ÜST NAVİGASYON (VİTRİN + ABONELİK)
 c1, c2 = st.columns([1, 4])
 with c1:
     if st.button("🏠 Ana Sayfa"): set_page('home')
 with c2:
-    cols = st.columns(4)
-    if cols[0].button("Game Pass"): 
-        st.session_state.selected_cat = "Game Pass"
-        set_page('category')
-    if cols[1].button("EA Play"): 
-        st.session_state.selected_cat = "EA Play"
-        set_page('category')
-    if cols[2].button("EA Play Pro"): 
-        st.session_state.selected_cat = "EA Play Pro"
-        set_page('category')
-    if cols[3].button("Ubisoft+"): 
-        st.session_state.selected_cat = "Ubisoft+"
-        set_page('category')
+    # 3'lü Vitrin Butonları
+    c_vitrin = st.columns(3)
+    if c_vitrin[0].button("🏆 Popüler"): go_category("Popular")
+    if c_vitrin[1].button("🔥 İndirim"): go_category("Sale")
+    if c_vitrin[2].button("✨ Yeni"): go_category("New")
+    
+    st.write("") # Boşluk
+    
+    # 4'lü Abonelik Butonları
+    c_sub = st.columns(4)
+    if c_sub[0].button("Game Pass"): go_category("Game Pass", True)
+    if c_sub[1].button("EA Play"): go_category("EA Play", True)
+    if c_sub[2].button("EA Pro"): go_category("EA Play Pro", True)
+    if c_sub[3].button("Ubisoft+"): go_category("Ubisoft+", True)
 
 st.divider()
 
@@ -241,73 +256,89 @@ with st.form("search_form"):
 # --- SAYFA: ANA SAYFA ---
 if st.session_state.active_page == 'home':
     
-    # 1. POPÜLER OYUNLAR
+    # 1. POPÜLER (İlk 4)
     st.markdown("<div class='cat-header'>🏆 En Popüler Başyapıtlar</div>", unsafe_allow_html=True)
-    pop_games = fetch_dynamic_deals("Popular")
+    pop_games = fetch_dynamic_deals("Popular", 0, 4)
     if pop_games:
         cols = st.columns(4)
-        for i, g in enumerate(pop_games[:4]):
+        for i, g in enumerate(pop_games):
             with cols[i]:
                 st.image(g['thumb'])
                 st.markdown(f"<div class='game-title'>{g['title']}</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='game-price'>{g['price']}</div>", unsafe_allow_html=True)
-                if st.button("İncele", key=f"pop_{i}"): go_detail(g)
+                # Fiyat + İndirim Etiketi
+                disc_html = f"<span class='discount-tag'>-%{int(g['discount'])}</span>" if g['discount'] > 0 else ""
+                st.markdown(f"<div class='price-container'><span class='game-price'>{g['price']}</span>{disc_html}</div>", unsafe_allow_html=True)
+                if st.button("İncele", key=f"home_pop_{i}"): go_detail(g)
 
-    # 2. İNDİRİMDEKİLER
+    # 2. İNDİRİM (İlk 4)
     st.markdown("<div class='cat-header'>🔥 Süper İndirimler</div>", unsafe_allow_html=True)
-    sale_games = fetch_dynamic_deals("Sale")
+    sale_games = fetch_dynamic_deals("Sale", 0, 4)
     if sale_games:
         cols = st.columns(4)
-        for i, g in enumerate(sale_games[:4]):
+        for i, g in enumerate(sale_games):
             with cols[i]:
                 st.image(g['thumb'])
                 st.markdown(f"<div class='game-title'>{g['title']}</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='game-price'>{g['price']}</div>", unsafe_allow_html=True)
-                if st.button("İncele", key=f"sale_{i}"): go_detail(g)
+                disc_html = f"<span class='discount-tag'>-%{int(g['discount'])}</span>"
+                st.markdown(f"<div class='price-container'><span class='game-price'>{g['price']}</span>{disc_html}</div>", unsafe_allow_html=True)
+                if st.button("İncele", key=f"home_sale_{i}"): go_detail(g)
 
-    # 3. YENİ ÇIKANLAR
+    # 3. YENİ (İlk 4)
     st.markdown("<div class='cat-header'>✨ Yeni Çıkanlar</div>", unsafe_allow_html=True)
-    new_games = fetch_dynamic_deals("New")
+    new_games = fetch_dynamic_deals("New", 0, 4)
     if new_games:
         cols = st.columns(4)
-        for i, g in enumerate(new_games[:4]):
+        for i, g in enumerate(new_games):
             with cols[i]:
                 st.image(g['thumb'])
                 st.markdown(f"<div class='game-title'>{g['title']}</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='game-price'>{g['price']}</div>", unsafe_allow_html=True)
-                if st.button("İncele", key=f"new_{i}"): go_detail(g)
+                st.markdown(f"<div class='price-container'><span class='game-price'>{g['price']}</span></div>", unsafe_allow_html=True)
+                if st.button("İncele", key=f"home_new_{i}"): go_detail(g)
 
-# --- SAYFA: KATEGORİ ---
+# --- SAYFA: KATEGORİ (LİSTELEME) ---
 elif st.session_state.active_page == 'category':
     cat_name = st.session_state.selected_cat
-    st.markdown(f"<div class='cat-header'>{cat_name} Kütüphanesi</div>", unsafe_allow_html=True)
+    is_sub = cat_name in SUBSCRIPTIONS
+    st.markdown(f"<div class='cat-header'>{cat_name} Listesi</div>", unsafe_allow_html=True)
     
-    full_list = SUBSCRIPTIONS.get(cat_name, [])
-    
-    # Sayfalama
-    total_games = len(full_list)
-    total_pages = math.ceil(total_games / PAGE_SIZE)
     curr_page = st.session_state.page_number
     
-    start_idx = curr_page * PAGE_SIZE
-    end_idx = start_idx + PAGE_SIZE
-    current_batch = full_list[start_idx:end_idx]
+    # Veri Kaynağı Seçimi (Manuel vs Dinamik)
+    if is_sub:
+        full_list = SUBSCRIPTIONS.get(cat_name, [])
+        total_games = len(full_list)
+        total_pages = math.ceil(total_games / PAGE_SIZE)
+        start_idx = curr_page * PAGE_SIZE
+        end_idx = start_idx + PAGE_SIZE
+        
+        current_batch_names = full_list[start_idx:end_idx]
+        current_batch = [get_game_details(name, cat_name) for name in current_batch_names]
+    else:
+        # Popüler/İndirim/Yeni Sayfası
+        current_batch = fetch_dynamic_deals(cat_name, curr_page, PAGE_SIZE)
+        total_pages = 10 # Dinamiklerde sabit sayfa limiti
     
     if not current_batch:
         st.info("Bu kategoride oyun bulunamadı.")
     else:
-        cols = st.columns(4)
-        for i, game_name in enumerate(current_batch):
-            col = cols[i % 4]
-            with col:
-                g = get_game_details(game_name, cat_name)
-                st.image(g['thumb'])
-                st.markdown(f"<div class='game-title'>{g['title']}</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='game-price'>{g['price']}</div>", unsafe_allow_html=True)
-                if st.button("İncele", key=f"cat_{curr_page}_{i}"): go_detail(g)
-                st.write("")
+        # Grid Display
+        for i in range(0, len(current_batch), 4):
+            cols = st.columns(4)
+            for j in range(4):
+                if i+j < len(current_batch):
+                    g = current_batch[i+j]
+                    with cols[j]:
+                        st.image(g['thumb'])
+                        st.markdown(f"<div class='game-title'>{g['title']}</div>", unsafe_allow_html=True)
+                        
+                        disc_val = g.get('discount', 0)
+                        disc_html = f"<span class='discount-tag'>-%{int(disc_val)}</span>" if disc_val > 0 else ""
+                        st.markdown(f"<div class='price-container'><span class='game-price'>{g['price']}</span>{disc_html}</div>", unsafe_allow_html=True)
+                        
+                        if st.button("İncele", key=f"cat_btn_{curr_page}_{i}_{j}"): go_detail(g)
+            st.write("")
 
-        # Sayfa Butonları
+        # Sayfalama
         if total_pages > 1:
             st.markdown("---")
             p_cols = st.columns(min(total_pages, 10))
@@ -336,11 +367,15 @@ elif st.session_state.active_page == 'detail':
         st.info(f"Kaynak: **{g['store']}**")
     
     with c2:
-        st.markdown(f"<h1 style='margin-top:0;'>{g['title']}</h1>", unsafe_allow_html=True)
+        st.title(g['title'])
         st.markdown(desc, unsafe_allow_html=True)
         st.write("")
         st.subheader("Market Fiyatı")
-        st.markdown(f"<div class='game-price' style='font-size:2em; text-align:left;'>{g['price']}</div>", unsafe_allow_html=True)
+        
+        disc_val = g.get('discount', 0)
+        disc_str = f" (-%{int(disc_val)})" if disc_val > 0 else ""
+        
+        st.markdown(f"<div class='game-price' style='font-size:2em; text-align:left;'>{g['price']}{disc_str}</div>", unsafe_allow_html=True)
         if g['appid'] != "0":
             st.link_button("Steam Mağazasına Git", f"https://store.steampowered.com/app/{g['appid']}")
 
