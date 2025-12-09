@@ -107,12 +107,25 @@ SUB_CLASSES = {
 }
 
 # --- 3. VERİTABANI ---
-SUBSCRIPTIONS = {
-    "Game Pass": ["call of duty", "black ops 6", "diablo 4", "starfield", "forza", "halo", "minecraft", "lies of p", "palworld", "hellblade", "stalker 2", "indiana jones", "sea of thieves", "doom", "expedition 33", "fable", "gears 5", "atomic heart", "persona 3", "yakuza", "wo long", "hollow knight", "remnant 2"],
-    "EA Play Pro": ["fc 26", "fc 25", "f1 24", "madden nfl 25", "star wars jedi: survivor", "immortals of aveum", "wild hearts", "dead space remake"],
-    "EA Play": ["fc 24", "fifa 23", "battlefield 2042", "battlefield v", "battlefield 1", "star wars jedi: fallen order", "sims 4", "titanfall 2", "mass effect legendary", "it takes two", "need for speed unbound", "crysis", "apex legends", "skate 3", "dragon age inquisition"],
-    "Ubisoft+": ["assassin's creed mirage", "assassin's creed valhalla", "assassin's creed shadows", "avatar: frontiers of pandora", "prince of persia: the lost crown", "far cry 6", "the crew motorfest", "rainbow six siege", "skull and bones", "watch dogs legion", "division 2", "ghost recon breakpoint", "anno 1800", "for honor", "riders republic"]
-}
+import json # En üste ekle
+
+# ... (Diğer kodlar aynı) ...
+
+# --- 3. VERİTABANI (DOSYADAN OKUMA) ---
+# Eskiden burası elle yazılırdı, şimdi dosyadan okunuyor.
+def load_subscriptions():
+    try:
+        with open('subscriptions.json', 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # Dosya yoksa acil durum yedeği
+        return {
+            "Game Pass": [], "EA Play": [], "EA Play Pro": [], "Ubisoft+": []
+        }
+
+SUBSCRIPTIONS = load_subscriptions()
+
+# ... (Geri kalan kodlar aynı) ...
 
 # Buton Etiketleri
 SUB_BTN_LABELS = {
@@ -591,3 +604,4 @@ elif st.session_state.active_page == 'search':
                     st.markdown("---")
         else: st.warning("Sonuç bulunamadı.")
     except Exception as e: st.error(str(e))
+
