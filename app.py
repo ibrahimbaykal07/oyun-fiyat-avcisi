@@ -1,9 +1,8 @@
 import streamlit as st
 import requests
-import json
-import math
 import streamlit.components.v1 as components
 from datetime import datetime
+import math
 
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
@@ -57,25 +56,39 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. MANUEL LİSTE (GÜNCEL YEDEK) ---
-# JSON Okuma Hatası Olursa Burası Kullanılır
-DEFAULT_SUBS = {
-    "Game Pass": ["Call of Duty: Black Ops 6", "Starfield", "Forza Horizon 5", "Minecraft"],
-    "EA Play Pro": ["EA SPORTS FC 25", "Madden NFL 25", "F1 24"],
-    "EA Play": ["FIFA 23", "Battlefield 2042"],
-    "Ubisoft+": ["Assassin's Creed Mirage", "Star Wars Outlaws"]
+# --- 4. MANUEL LİSTE (SABİT - HATASIZ) ---
+SUBSCRIPTIONS = {
+    "Game Pass": [
+        "Call of Duty: Black Ops 6", "Modern Warfare III", "Diablo IV", "Starfield", "Forza Motorsport", "Forza Horizon 5", 
+        "Halo Infinite", "Microsoft Flight Simulator 2024", "Senua's Saga: Hellblade II", "S.T.A.L.K.E.R. 2", "Indiana Jones", 
+        "Avowed", "Persona 3 Reload", "Like a Dragon: Infinite Wealth", "Palworld", "Lies of P", "Cocoon", "Sea of Stars", 
+        "Hi-Fi RUSH", "Atomic Heart", "Wo Long", "A Plague Tale: Requiem", "Scorn", "Grounded", "High On Life", "Deathloop", 
+        "Ghostwire: Tokyo", "Minecraft", "Sea of Thieves", "Gears 5", "Doom Eternal", "Halo MCC", "Age of Empires IV", 
+        "Psychonauts 2", "Back 4 Blood", "Sniper Elite 5", "Monster Hunter Rise", "Assassin's Creed Valhalla", 
+        "Assassin's Creed Odyssey", "Far Cry 6", "Watch Dogs 2", "Rainbow Six Siege", "FIFA 23", "Battlefield 2042", 
+        "Mass Effect Legendary", "It Takes Two", "Need for Speed Unbound", "Jedi Fallen Order", "Titanfall 2", "The Sims 4", 
+        "Cities Skylines II", "Football Manager 2024", "Payday 3", "Darktide", "Remnant 2", "Hollow Knight", "Stardew Valley", 
+        "Vampire Survivors", "Valheim", "Among Us", "No Man's Sky", "Fallout 4", "Skyrim", "Control", "Dishonored 2", 
+        "Yakuza: Like a Dragon", "Persona 5 Royal", "Tunic", "Dead Cells", "Slay the Spire", "Celeste", "Undertale"
+    ],
+    "EA Play Pro": [
+        "EA SPORTS FC 25", "EA SPORTS FC 26", "Madden NFL 25", "F1 24", "Star Wars Jedi: Survivor", "Immortals of Aveum", 
+        "Wild Hearts", "Dead Space Remake", "Tales of Kenzera", "PGA Tour", "WRC 23", "Lost in Random", "Knockout City",
+        "It Takes Two", "Mass Effect Legendary", "Need for Speed Unbound", "Battlefield 2042"
+    ],
+    "EA Play": [
+        "EA SPORTS FC 24", "FIFA 23", "F1 23", "Madden NFL 24", "Battlefield 2042", "Battlefield V", "Jedi Fallen Order", 
+        "Battlefront II", "Mass Effect Legendary", "Titanfall 2", "The Sims 4", "Need for Speed Heat", "It Takes Two", 
+        "A Way Out", "Unravel Two", "Dragon Age Inquisition", "Crysis Remastered", "Dead Space 3", "Skate 3", "Mirror's Edge"
+    ],
+    "Ubisoft+": [
+        "Assassin's Creed Shadows", "Star Wars Outlaws", "Avatar: Frontiers of Pandora", "Prince of Persia: The Lost Crown", 
+        "Assassin's Creed Mirage", "The Crew Motorfest", "Skull and Bones", "Assassin's Creed Valhalla", "Far Cry 6", 
+        "Rainbow Six Siege", "The Division 2", "Ghost Recon Breakpoint", "Watch Dogs Legion", "Immortals Fenyx Rising", 
+        "Riders Republic", "Anno 1800", "For Honor", "The Crew 2", "Trackmania", "South Park", "Rayman Legends", "Splinter Cell"
+    ]
 }
 
-def load_subscriptions():
-    try:
-        with open('subscriptions.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            if "_meta" in data: del data["_meta"]
-            return data
-    except:
-        return DEFAULT_SUBS
-
-SUBSCRIPTIONS = load_subscriptions()
 STORE_LOGOS = {"Steam": "https://cdn.simpleicons.org/steam/171a21", "Epic Games": "https://cdn.simpleicons.org/epicgames/333333", "Ubisoft Connect": "https://cdn.simpleicons.org/ubisoft/0099FF", "EA App": "https://cdn.simpleicons.org/ea/FF4747", "GOG": "https://cdn.simpleicons.org/gogdotcom/893CE7"}
 
 # --- 5. SESSION STATE ---
@@ -270,32 +283,31 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
     results = []
     
     for name in batch:
-        # 1. Varsayılan (Manuel) Oyun Objeyi Oluştur
-        # Eğer API'den veri gelmezse bu gösterilecek (Garantili)
+        # Varsayılan Oyun Objesi (Hatasız)
         game_obj = {
             "title": name,
             "thumb": PLACEHOLDER_IMG,
             "meta": 0,
             "user": 0,
-            "dealID": f"man_{name.replace(' ', '_')}", # BENZERSİZ ID (Hata Çözücü)
+            "dealID": None,
             "steamAppID": "0",
-            "price": "---", # Fiyat yok
+            "price": "---",
             "discount": 0.0,
             "store": sub_name,
             "offers": []
         }
         
+        # API'den Veri Çek (Hata Korumalı)
         try:
-            # 2. API'ye Sor
             search_name = name.split(':')[0] if ':' in name else name 
             url = f"https://www.cheapshark.com/api/1.0/deals?title={search_name}&exact=0&limit=1"
-            r = requests.get(url, timeout=1.5) # Kısa timeout
+            r = requests.get(url, timeout=1.0) # Çok kısa timeout, donmayı engeller
             
             if r.status_code == 200:
                 data = r.json()
                 if data:
                     d = data[0]
-                    # İsim benzerliğini kontrol et (Alakasız oyun gelmesin)
+                    # İsim benzerliği kontrolü (Alakasız oyun gelmesin)
                     if search_name.lower() in d['title'].lower():
                         price_tl = int(float(d['salePrice']) * dolar_kuru)
                         game_obj.update({
@@ -310,10 +322,9 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
                             "store": "Steam" if d['storeID'] == "1" else "Epic",
                             "offers": [{"store": "Mağaza", "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}"}]
                         })
-        except: pass # API hatası olursa manuel obje kalır
+        except: pass
         
         results.append(game_obj)
-        
     return results
 
 # ================= ARAYÜZ BAŞLIYOR =================
@@ -371,8 +382,8 @@ if st.session_state.active_page == 'home':
                         c_p, c_d = st.columns([2, 1])
                         c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
-                        # BENZERSİZ KEY (Ana Sayfa)
-                        if st.button("İncele", key=f"home_btn_{g['dealID']}_{i}_{j}"): go_detail(g)
+                        # BENZERSİZ KEY (Sıra Numaralı)
+                        if st.button("İncele", key=f"home_btn_{limit_key}_{i}_{j}"): go_detail(g)
             st.write("")
         if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"): increase_home_limit(limit_key)
         st.markdown("---")
@@ -401,8 +412,8 @@ elif st.session_state.active_page == 'category':
                         st.image(g['thumb'], use_container_width=True)
                         st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
-                        # BENZERSİZ KEY (Kategori Sayfası - ID + Index)
-                        btn_key = f"cat_btn_{g['dealID']}_{i+j}"
+                        # BENZERSİZ KEY (Sayfa ve Sıra Numaralı)
+                        btn_key = f"cat_btn_{curr_page}_{i}_{j}"
                         if st.button("İncele", key=btn_key): go_detail(g)
             st.write("")
         
@@ -435,7 +446,7 @@ elif st.session_state.active_page == 'detail':
         st.write("### 🏷️ Mağaza Fiyatları")
         offers = game.get('offers', [])
         if not offers: offers = [{"store": game.get('store', 'Bilinmiyor'), "price": game.get('price', '---'), "link": "#"}]
-        for off in offers:
+        for i, off in enumerate(offers):
             logo = STORE_LOGOS.get(off['store'])
             cl1, cl2, cl3 = st.columns([3, 2, 2])
             with cl1:
@@ -522,7 +533,7 @@ elif st.session_state.active_page == 'search':
         if grouped:
             st.success(f"✅ {len(grouped)} oyun bulundu.")
             g_list = sorted(grouped.values(), key=lambda x: (x['sort_score'], min([o['price'] for o in x['offers']] if x['offers'] else [99999])))
-            for game in g_list:
+            for i, game in enumerate(g_list):
                 with st.container():
                     c1, c2, c3 = st.columns([1.5, 2.5, 3])
                     with c1: st.image(game['thumb'], use_container_width=True)
@@ -531,7 +542,7 @@ elif st.session_state.active_page == 'search':
                         sub_n, sub_cls = check_subscription(game['title'])
                         if sub_n:
                             st.markdown(f"<span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>", unsafe_allow_html=True)
-                            if st.button(f"Listeye Git ({sub_n})", key=f"src_sub_{game['title']}"): go_category(sub_n, None, None, True)
+                            if st.button(f"Listeye Git ({sub_n})", key=f"src_sub_{game['title']}_{i}"): go_category(sub_n, None, None, True)
                         st.write("")
                         if game['meta']>0: 
                             mc=get_meta_color(game['meta'])
@@ -550,9 +561,8 @@ elif st.session_state.active_page == 'search':
                                 with cc3: st.link_button("Git", off['link'])
                                 st.divider()
                         else: st.caption("Henüz mağaza fiyatı yok.")
-                        
-                        # BENZERSİZ KEY (Arama Sayfası)
-                        if st.button("🔍 Detaylı İncele", key=f"src_dt_{game['title']}_{game.get('dealID', '0')}"): go_detail(game)
+                        # BENZERSİZ KEY (Arama Sonucu)
+                        if st.button("🔍 Detaylı İncele", key=f"src_dt_{game['title']}_{i}"): go_detail(game)
                     st.markdown("---")
         else: st.warning("Sonuç bulunamadı.")
     except Exception as e: st.error(str(e))
