@@ -7,15 +7,14 @@ import re
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
 PAGE_SIZE = 12
-# Dikey (Poster) Placeholder
 PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
 
-# --- 2. CSS (DİKEY GÖRSEL VE DÜZEN) ---
+# --- 2. CSS STİLİ (DİKEY GÖRSEL & DÜZEN) ---
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; }
     
-    /* RESİMLERİ DİKEY ZORLA (POSTER) */
+    /* GÖRSELLERİ DİK (POSTER) YAP */
     div[data-testid="stImage"] img { 
         border-radius: 8px; 
         width: 100%; 
@@ -24,38 +23,42 @@ st.markdown("""
     }
     
     .game-title { 
-        font-size: 0.95em; 
+        font-size: 0.9em; 
         font-weight: bold; 
         margin-top: 8px; 
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis; 
         color: #333; 
+        text-align: center;
     }
+    
     .game-price { 
         font-size: 1.1em; 
         font-weight: bold; 
         color: #28a745; 
         margin: 2px 0; 
+        text-align: center;
     }
     
-    /* BUTONLAR */
-    .stButton button { width: 100%; border-radius: 5px; }
-    
-    /* SAYFALAMA BUTONLARI */
-    div[data-testid="column"] button { min-width: 40px; }
-    
+    /* KATEGORİ BAŞLIĞI */
+    .cat-header {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 10px;
+    }
+
     /* DETAY SAYFASI */
     .detail-title { font-family: sans-serif; font-size: 2.5em; font-weight: 800; margin-bottom: 10px; }
-    .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; color: white; font-weight: bold; font-size: 0.8em; margin-right: 5px; }
-    .bg-green { background-color: #28a745; } /* Meta Yeşil */
-    .bg-yellow { background-color: #ffc107; color: #333; } /* Meta Sarı */
-    .bg-red { background-color: #dc3545; } /* Meta Kırmızı */
-    .bg-blue { background-color: #1b2838; } /* Steam Mavi */
+    
+    .stButton button { width: 100%; border-radius: 5px; }
+    div[data-testid="column"] button { min-width: 40px; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. OYUN LİSTELERİ (MANUEL) ---
+# --- 3. MANUEL OYUN LİSTELERİ ---
 SUBSCRIPTIONS = {
     "Game Pass": [
         "Call of Duty: Black Ops 6", "Call of Duty: Modern Warfare III", "Diablo IV", "Starfield", 
@@ -90,10 +93,10 @@ SUBSCRIPTIONS = {
     ]
 }
 
-# --- 4. SESSION STATE ---
+# --- 4. SESSION STATE BAŞLATMA ---
 if 'active_page' not in st.session_state: st.session_state.active_page = 'home'
 if 'page_number' not in st.session_state: st.session_state.page_number = 0
-if 'selected_cat' not in st.session_state: st.session_state.selected_cat = None
+if 'selected_cat' not in st.session_state: st.session_state.selected_cat = "Game Pass"
 if 'selected_game' not in st.session_state: st.session_state.selected_game = None
 if 'search_term' not in st.session_state: st.session_state.search_term = ""
 
@@ -143,17 +146,12 @@ def fetch_steam_data(game_name):
                 # FİYAT (Steam ne veriyorsa o)
                 price_text = "Ücretsiz"
                 if 'price' in item:
-                    # 'final' değeri kuruşludur (1499 -> 14.99)
                     val = item['price']['final'] / 100
-                    # Steam TR artık USD olduğu için varsayılan $ ekliyoruz
-                    # Eğer eski bir oyun TL ise Steam zaten TL döndürür, biz $ varsayalım şimdilik
-                    # (Steam API 'currency' dönmediği için, TR mağazası = USD varsayımı güvenlidir)
+                    # Steam TR genelde USD dönüyor, sembol yoksa ekle
                     price_text = f"${val:.2f}"
                 
                 return {"price": price_text, "thumb": thumb, "appid": appid}
     except: pass
-    
-    # Bulunamazsa
     return None
 
 def get_game_details(game_name, sub_name=""):
@@ -178,12 +176,13 @@ def get_game_details(game_name, sub_name=""):
 # ================= ARAYÜZ =================
 scroll_to_top()
 
-# Üst Menü
+# 1. ÜST MENÜ (NAVİGASYON)
 c1, c2 = st.columns([1, 4])
 with c1:
     if st.button("🏠 Ana Sayfa"): set_page('home')
 with c2:
     cols = st.columns(4)
+    # Butonlara tıklayınca State güncellenir ve sayfa yenilenir
     if cols[0].button("Game Pass"): 
         st.session_state.selected_cat = "Game Pass"
         set_page('category')
@@ -199,7 +198,7 @@ with c2:
 
 st.divider()
 
-# Arama
+# 2. ARAMA KUTUSU
 with st.form("search_form"):
     c1, c2 = st.columns([5, 1])
     query = c1.text_input("Oyun Ara", placeholder="Oyun adı...", label_visibility="collapsed")
@@ -209,7 +208,7 @@ with st.form("search_form"):
 
 # --- SAYFA: ANA SAYFA ---
 if st.session_state.active_page == 'home':
-    st.subheader("🔥 Popüler Oyunlar (Game Pass)")
+    st.markdown("<div class='cat-header'>🔥 Popüler Oyunlar (Game Pass)</div>", unsafe_allow_html=True)
     # Game Pass listesinden ilk 8 oyunu göster
     games_list = SUBSCRIPTIONS["Game Pass"][:8]
     
@@ -229,7 +228,7 @@ if st.session_state.active_page == 'home':
 # --- SAYFA: KATEGORİ ---
 elif st.session_state.active_page == 'category':
     cat_name = st.session_state.selected_cat
-    st.subheader(f"{cat_name} Kütüphanesi")
+    st.markdown(f"<div class='cat-header'>{cat_name} Kütüphanesi</div>", unsafe_allow_html=True)
     
     full_list = SUBSCRIPTIONS.get(cat_name, [])
     
@@ -242,27 +241,32 @@ elif st.session_state.active_page == 'category':
     end_idx = start_idx + PAGE_SIZE
     current_batch = full_list[start_idx:end_idx]
     
-    # Grid
-    cols = st.columns(4)
-    for i, game_name in enumerate(current_batch):
-        col = cols[i % 4]
-        with col:
-            g = get_game_details(game_name, cat_name)
-            st.image(g['thumb'])
-            st.markdown(f"<div class='game-title'>{g['title']}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='game-price'>{g['price']}</div>", unsafe_allow_html=True)
-            # Benzersiz Key: cat + page + index
-            if st.button("İncele", key=f"btn_cat_{curr_page}_{i}"): go_detail(g)
-            st.write("")
+    if not current_batch:
+        st.info("Bu kategoride oyun bulunamadı.")
+    else:
+        # Grid
+        cols = st.columns(4)
+        for i, game_name in enumerate(current_batch):
+            col = cols[i % 4]
+            with col:
+                g = get_game_details(game_name, cat_name)
+                st.image(g['thumb'])
+                st.markdown(f"<div class='game-title'>{g['title']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='game-price'>{g['price']}</div>", unsafe_allow_html=True)
+                # Benzersiz Key: cat + page + index
+                if st.button("İncele", key=f"btn_cat_{curr_page}_{i}"): go_detail(g)
+                st.write("")
 
-    # Sayfa Butonları
-    if total_pages > 1:
-        st.markdown("---")
-        p_cols = st.columns(min(total_pages, 10))
-        for p in range(min(total_pages, 10)):
-            if p_cols[p].button(str(p+1), key=f"page_btn_{p}", type="primary" if p == curr_page else "secondary"):
-                st.session_state.page_number = p
-                st.rerun()
+        # Sayfa Butonları
+        if total_pages > 1:
+            st.markdown("---")
+            p_cols = st.columns(min(total_pages, 10))
+            for p in range(min(total_pages, 10)):
+                # Aktif sayfa butonu primary renkli
+                btn_type = "primary" if p == curr_page else "secondary"
+                if p_cols[p].button(str(p+1), key=f"page_btn_{p}", type=btn_type):
+                    st.session_state.page_number = p
+                    st.rerun()
 
 # --- SAYFA: DETAY ---
 elif st.session_state.active_page == 'detail':
@@ -281,7 +285,7 @@ elif st.session_state.active_page == 'detail':
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
         st.image(g['thumb'])
-        st.info(f"Dahil olduğu abonelik: **{g['store']}**")
+        st.info(f"Abonelik: **{g['store']}**")
     
     with c2:
         st.title(g['title'])
@@ -302,11 +306,11 @@ elif st.session_state.active_page == 'search':
     
     if res['appid'] != "0":
         with st.container():
-            c1, c2 = st.columns([1, 3])
+            c1, c2 = st.columns([1.5, 2.5])
             with c1: st.image(res['thumb'])
             with c2:
                 st.subheader(res['title'])
                 st.markdown(f"<div class='game-price'>{res['price']}</div>", unsafe_allow_html=True)
                 if st.button("İncele", key="search_res_btn"): go_detail(res)
     else:
-        st.warning("Oyun bulunamadı.")
+        st.warning("Oyun bulunamadı veya Steam'de yok.")
