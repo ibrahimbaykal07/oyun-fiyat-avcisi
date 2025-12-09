@@ -12,10 +12,6 @@ PAGE_SIZE = 12
 PLACEHOLDER_IMG = "https://placehold.co/600x300/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
 RAWG_API_KEY = "3f8159cbaaac426bac87a770371c941f"
 
-# --- ZORUNLU SABİT KUR (Güvenlik Sigortası) ---
-# Eğer internet giderse veya TCMB hata verirse bu değer kullanılır. ASLA 1.0 OLMAZ.
-FALLBACK_DOLAR = 38.50 
-
 # --- 2. GÖMÜLÜ LOGOLAR ---
 ICON_GAMEPASS = "data:image/png;base64,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"
 ICON_EA = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0ZGODU1NSI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTMuNSA3aC0zLjV2Mi41aDN2MS41aC0zVjE2aDN2MS41aC00LjVWOGg0LjV6bS02IDBoLTMuNXY4aDQuNXYtMS41aC0zdi0yLjVoM3YtMS41aC0zVjkuNWgzLjV6Ii8+PC9zdmc+"
@@ -127,7 +123,6 @@ def show_gallery_modal(media_list, start_idx=0):
 
 # --- DOLAR KURU (CANLI TCMB - CACHE YOK) ---
 def get_dollar_rate():
-    """TCMB'den canlı kur çeker, çekemezse zorunlu sabiti kullanır"""
     try:
         r = requests.get("https://www.tcmb.gov.tr/kurlar/today.xml", timeout=3)
         root = ET.fromstring(r.content)
@@ -135,33 +130,7 @@ def get_dollar_rate():
             if c.get('Kod') == 'USD':
                 return float(c.find('ForexSelling').text)
     except: pass
-    return FALLBACK_DOLAR # Sigorta (38.50)
-
-# --- AKILLI RAWG ARAMA ---
-@st.cache_data(ttl=3600)
-def fetch_rawg_data(game_name):
-    clean_name = re.sub(r'\(.*?\)', '', game_name)
-    search_queries = [
-        clean_name, 
-        clean_name.split(':')[0],
-        clean_name.replace('.', '').replace(':', ''),
-        " ".join(clean_name.split()[:2])
-    ]
-    if "fc 26" in game_name.lower(): search_queries = ["EA Sports FC 25"]
-
-    for query in search_queries:
-        if len(query) < 2: continue
-        try:
-            url = f"https://api.rawg.io/api/games?key={RAWG_API_KEY}&search={query}&page_size=1"
-            r = requests.get(url, timeout=2)
-            if r.status_code == 200:
-                data = r.json()
-                if data['results']:
-                    res = data['results'][0]
-                    if res.get('background_image'):
-                        return {"image": res.get('background_image'), "meta": res.get('metacritic', 0)}
-        except: pass
-    return None
+    return 38.00 # Yedek kur
 
 def get_game_image(deal):
     sid = deal.get('steamAppID')
@@ -291,6 +260,42 @@ def increase_home_limit(key):
     st.rerun()
 
 # --- 8. VERİ MOTORU ---
+# --- ÖNEMLİ: STEAM TÜRKİYE FİYATINI ÇEKME ---
+@st.cache_data(ttl=3600)
+def get_steam_data_tr(game_name):
+    """
+    Oyunun Steam Türkiye fiyatını ve resmini çeker.
+    """
+    clean_name = re.sub(r'\(.*?\)', '', game_name).replace(':', '').replace('.', '')
+    try:
+        # 1. Ara
+        url = f"https://store.steampowered.com/api/storesearch/?term={clean_name}&l=turkish&cc=tr"
+        r = requests.get(url, timeout=3)
+        if r.status_code == 200:
+            data = r.json()
+            if data['total'] > 0:
+                item = data['items'][0]
+                app_id = item['id']
+                img = f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{app_id}/header.jpg"
+                
+                # 2. Fiyat Al (TR Mağazası)
+                price_text = "Fiyat Yok"
+                if 'price' in item:
+                    # Steam bazen kuruşlu verir (12345 = 123.45 TL)
+                    price_val = item['price']['final'] / 100
+                    price_text = f"{price_val:.2f} TL"
+                else:
+                    price_text = "Ücretsiz"
+                
+                return {
+                    "price": price_text,
+                    "thumb": img,
+                    "steamAppID": app_id,
+                    "dealID": f"steam_{app_id}"
+                }
+    except: pass
+    return None
+
 def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
     url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy={sort_by}&onSale={on_sale}&pageSize={page_size}&pageNumber={page}"
     if sort_by == "Release": url += "&desc=1"
@@ -299,46 +304,30 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
         data = requests.get(url).json()
         results = []
         for d in data:
-            s_name = "Steam" if d['storeID'] == "1" else "Epic Games"
-            # DOLAR -> TL ÇEVİRİ
-            price_tl = int(float(d['salePrice']) * dolar_kuru)
-            offer = {"store": s_name, "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}", "discount": float(d['savings'])}
+            # CheapShark verisi yerine Steam TR verisini önceliklendir
+            steam_data = get_steam_data_tr(d['title'])
+            
+            final_price = f"{d['salePrice']} USD" # Varsayılan
+            final_thumb = get_game_image(d)
+            final_id = d['dealID']
+            final_appid = d.get('steamAppID', '0')
+            
+            if steam_data:
+                final_price = steam_data['price']
+                final_thumb = steam_data['thumb']
+                final_appid = steam_data['steamAppID']
+            
+            offer = {"store": "Mağaza", "price": final_price, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}", "discount": float(d['savings'])}
             results.append({
-                "title": d['title'], "thumb": get_game_image(d),
+                "title": d['title'], "thumb": final_thumb,
                 "meta": int(d['metacriticScore']), "user": int(d['steamRatingPercent']),
-                "dealID": d['dealID'], "steamAppID": d.get('steamAppID'),
-                "price": price_tl, "discount": float(d['savings']),
-                "offers": [offer], "store": s_name, "releaseDate": d.get('releaseDate', 0)
+                "dealID": final_id, "steamAppID": final_appid,
+                "price": final_price, "discount": float(d['savings']),
+                "offers": [offer], "store": "Steam" if d['storeID'] == "1" else "Epic", "releaseDate": d.get('releaseDate', 0)
             })
         if sort_by == "Release": results.sort(key=lambda x: x['releaseDate'], reverse=True)
         return results
     except: return []
-
-# --- AKILLI FİYAT AVCISI (V72) ---
-@st.cache_data(ttl=3600)
-def fetch_price_smart(game_name):
-    # İsim varyasyonları
-    search_candidates = [
-        game_name, 
-        re.sub(r'[^\w\s]', '', game_name), 
-        game_name.split(':')[0], 
-        re.sub(r'\(\d{4}\)', '', game_name).strip()
-    ]
-    if "fc 26" in game_name.lower(): return None
-    
-    for query in list(set(search_candidates)):
-        if len(query) < 3: continue
-        try:
-            url = f"https://www.cheapshark.com/api/1.0/deals?title={query}&exact=0&limit=1"
-            r = requests.get(url, timeout=3)
-            if r.status_code == 200:
-                data = r.json()
-                if data:
-                    d = data[0]
-                    if query.split()[0].lower() in d['title'].lower():
-                        return d
-        except: pass
-    return None
 
 def fetch_sub_games(sub_name, page=0, page_size=12):
     game_names = SUBSCRIPTIONS.get(sub_name, [])
@@ -348,51 +337,40 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
     results = []
     
     for i, name in enumerate(batch):
-        # Varsayılan Obje
         game_obj = {
             "title": name,
             "thumb": PLACEHOLDER_IMG,
             "meta": 0, "user": 0,
-            "dealID": f"sub_{sub_name}_{start + i}", # Benzersiz ID
+            "dealID": f"sub_{sub_name}_{start + i}", 
             "steamAppID": "0",
             "price": "---", "discount": 0.0, "store": sub_name, "offers": []
         }
         
-        # 1. Görsel (RAWG)
-        rawg = fetch_rawg_data(name)
-        if rawg:
-            if rawg['image']: game_obj["thumb"] = rawg['image']
-            if rawg['meta']: game_obj["meta"] = rawg['meta']
-
-        # 2. Fiyat (CheapShark)
-        deal_data = fetch_price_smart(name)
-        if deal_data:
-            # CANLI KUR ÇARPIMI (KRİTİK)
-            price_tl = int(float(deal_data['salePrice']) * dolar_kuru)
-            
-            # Eğer RAWG resim bulamadıysa CheapShark'tan al
-            thumb = game_obj["thumb"]
-            if thumb == PLACEHOLDER_IMG: thumb = get_game_image(deal_data)
-
+        # Steam TR'den Gerçek Veri Çek
+        steam_data = get_steam_data_tr(name)
+        
+        if steam_data:
             game_obj.update({
-                "title": deal_data['title'],
-                "thumb": thumb,
-                "meta": int(deal_data['metacriticScore']),
-                "user": int(deal_data['steamRatingPercent']),
-                "dealID": deal_data['dealID'],
-                "steamAppID": deal_data.get('steamAppID'),
-                "price": price_tl,
-                "discount": float(deal_data['savings']),
-                "store": "Steam" if deal_data['storeID'] == "1" else "Epic",
-                "offers": [{"store": "Mağaza", "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={deal_data['dealID']}"}]
+                "thumb": steam_data['thumb'],
+                "price": steam_data['price'],
+                "steamAppID": steam_data['steamAppID'],
+                "offers": [{"store": "Steam (TR)", "price": steam_data['price'], "link": f"https://store.steampowered.com/app/{steam_data['steamAppID']}"}]
             })
-            
+        else:
+            # Bulunamazsa RAWG veya CheapShark dene (Yedek)
+            try:
+                # Basit CheapShark araması (Resim için)
+                url = f"https://www.cheapshark.com/api/1.0/deals?title={name.split(':')[0]}&exact=0&limit=1"
+                d = requests.get(url, timeout=1).json()[0]
+                game_obj["thumb"] = get_game_image(d)
+            except: pass
+
         results.append(game_obj)
     return results
 
 # ================= ARAYÜZ BAŞLIYOR =================
 scroll_to_top()
-dolar_kuru = get_dollar_rate() # TCMB CANLI KUR
+dolar_kuru = get_dollar_rate()
 
 h1, h2, h3 = st.columns([1.5, 4, 1.5])
 with h1:
@@ -415,9 +393,10 @@ with h3:
 
 st.divider()
 
+# ARAMA KUTUSU (STEAM TR DESTEKLİ)
 with st.form(key='global_search'):
     ci, cb = st.columns([4, 1])
-    with ci: s_val = st.text_input("Oyun Ara", placeholder="FC 26, GTA V...", label_visibility="collapsed")
+    with ci: s_val = st.text_input("Oyun Ara (Steam TR)", placeholder="FC 25, GTA V...", label_visibility="collapsed")
     with cb: s_btn = st.form_submit_button("🔎 Bul")
 
 if s_btn and s_val:
@@ -443,9 +422,9 @@ if st.session_state.active_page == 'home':
                         if sort_key == "Release" and g['releaseDate'] > 0:
                             st.markdown(f"<div class='vitrin-date'>📅 {timestamp_to_date(g['releaseDate'])}</div>", unsafe_allow_html=True)
                         c_p, c_d = st.columns([2, 1])
-                        c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
+                        # Fiyat zaten TL olarak formatlı geliyor
+                        c_p.markdown(f"<div class='vitrin-price'>{g['price']}</div>", unsafe_allow_html=True)
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
-                        # BENZERSİZ KEY (Sıra Numaralı)
                         if st.button("İncele", key=f"home_btn_{limit_key}_{i}_{j}"): go_detail(g)
             st.write("")
         if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"): increase_home_limit(limit_key)
@@ -474,8 +453,8 @@ elif st.session_state.active_page == 'category':
                     with cols[j]:
                         st.image(g['thumb'], use_container_width=True)
                         st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
-                        # BENZERSİZ KEY (Sayfa + Satır + Sütun)
+                        # Fiyat TL formatında
+                        st.markdown(f"<div class='vitrin-price'>{g['price']}</div>", unsafe_allow_html=True)
                         if st.button("İncele", key=f"cat_btn_{curr_page}_{i}_{j}"): go_detail(g)
             st.write("")
         st.markdown("---")
@@ -508,12 +487,12 @@ elif st.session_state.active_page == 'detail':
         offers = game.get('offers', [])
         if not offers: offers = [{"store": game.get('store', 'Bilinmiyor'), "price": game.get('price', '---'), "link": "#"}]
         for i, off in enumerate(offers):
-            logo = STORE_LOGOS.get(off['store'])
+            logo = STORE_LOGOS.get(off.get('store', 'Steam'))
             cl1, cl2, cl3 = st.columns([3, 2, 2])
             with cl1:
-                if logo: st.markdown(f"<div style='display:flex;align-items:center;'><img src='{logo}' width='24' style='margin-right:8px;'><b>{off['store']}</b></div>", unsafe_allow_html=True)
-                else: st.write(f"**{off['store']}**")
-            with cl2: st.markdown(f"<span class='price-big'>{off['price']} TL</span>", unsafe_allow_html=True)
+                if logo: st.markdown(f"<div style='display:flex;align-items:center;'><img src='{logo}' width='24' style='margin-right:8px;'><b>{off.get('store', 'Mağaza')}</b></div>", unsafe_allow_html=True)
+                else: st.write(f"**{off.get('store', 'Mağaza')}**")
+            with cl2: st.markdown(f"<span class='price-big'>{off['price']}</span>", unsafe_allow_html=True)
             with cl3: st.link_button("Satın Al", off['link'], type="primary")
             st.divider()
     st.markdown("---")
@@ -547,87 +526,71 @@ elif st.session_state.active_page == 'detail':
 elif st.session_state.active_page == 'search':
     term = st.session_state.search_term
     st.info(f"🔎 '{term}' aranıyor...")
-    corrected = autocorrect_name(term)
-    url = f"https://www.cheapshark.com/api/1.0/deals?title={corrected}&exact=0&limit=60"
+    
+    # DOĞRUDAN STEAM TR ARAMASI
+    steam_res = get_steam_data_tr(term)
+    
+    # CheapShark Sonuçları (Yedek)
     try:
+        url = f"https://www.cheapshark.com/api/1.0/deals?title={term}&exact=0&limit=60"
         deals = requests.get(url).json()
-        grouped = {}
-        s_map = { "1": "Steam", "25": "Epic Games", "7": "GOG", "8": "EA App", "13": "Ubisoft Connect" }
-        for deal in deals:
-            if deal['storeID'] in s_map:
-                title = clean_game_title(deal['title'])
-                if title not in grouped:
-                    sort_score = calculate_sort_score(title, corrected)
-                    grouped[title] = {
-                        "title": deal['title'],
-                        "thumb": get_game_image(deal),
-                        "meta": int(deal['metacriticScore']),
-                        "user": int(deal['steamRatingPercent']),
-                        "offers": [],
-                        "steamAppID": deal.get('steamAppID'),
-                        "sort_score": sort_score
-                    }
-                if deal.get('steamAppID') and not grouped[title].get('steamAppID'):
-                    grouped[title]['steamAppID'] = deal.get('steamAppID')
-                    grouped[title]['thumb'] = get_game_image(deal)
-                s_name = s_map[deal['storeID']]
-                p_usd = float(deal['salePrice'])
-                final_link = f"https://www.cheapshark.com/redirect?dealID={deal['dealID']}"
-                if s_name == "Steam" and deal.get('steamAppID'):
-                    price_val, curr = get_steam_turkey_price(deal.get('steamAppID'))
-                    if price_val: p_usd = price_val
-                elif s_name == "Epic Games":
-                    ep_p, _, ep_l = get_epic_price_local(deal['title'])
-                    if ep_p: p_usd = ep_p
-                # CANLI KUR ÇARPIMI (KRİTİK)
-                price_final = int(p_usd) if s_name in ["Steam", "Epic Games"] else int(p_usd * dolar_kuru)
-                grouped[title]["offers"].append({"store": s_name, "price": price_final, "link": final_link})
-        
-        if not grouped:
-            for sub, games in SUBSCRIPTIONS.items():
-                for g_name in games:
-                    if term.lower() in g_name.lower():
-                        data = fetch_price_smart(g_name)
-                        thumb = get_game_image(data) if data else PLACEHOLDER_IMG
-                        grouped[g_name.title()] = {
-                            "title": g_name.title(), "thumb": thumb,
-                            "meta": 0, "user": 0, "sort_score": 0, "offers": [], "steamAppID": "0"
-                        }
+    except: deals = []
 
-        if grouped:
-            st.success(f"✅ {len(grouped)} oyun bulundu.")
-            g_list = sorted(grouped.values(), key=lambda x: (x['sort_score'], min([o['price'] for o in x['offers']] if x['offers'] else [99999])))
-            for i, game in enumerate(g_list):
-                with st.container():
-                    c1, c2, c3 = st.columns([1.5, 2.5, 3])
-                    with c1: st.image(game['thumb'], use_container_width=True)
-                    with c2: 
-                        st.subheader(game['title'])
-                        sub_n, sub_cls = check_subscription(game['title'])
-                        if sub_n:
-                            st.markdown(f"<span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>", unsafe_allow_html=True)
-                            if st.button(f"Listeye Git ({sub_n})", key=f"src_sub_{game['title']}_{i}"): go_category(sub_n, None, None, True)
-                        st.write("")
-                        if game['meta']>0: 
-                            mc=get_meta_color(game['meta'])
-                            st.markdown(f"<span class='score-badge {mc}'>Meta: {game['meta']}</span>", unsafe_allow_html=True)
-                    with c3:
-                        st.write("**Fiyatlar**")
-                        s_offers = sorted(game['offers'], key=lambda x: x['price'])
-                        if s_offers:
-                            for off in s_offers:
-                                l_url = STORE_LOGOS.get(off['store'])
-                                cc1, cc2, cc3 = st.columns([3, 2, 2])
-                                with cc1: 
-                                    if l_url: st.image(l_url, width=20)
-                                    else: st.write(off['store'])
-                                with cc2: st.markdown(f"<span class='price-big'>{off['price']} TL</span>", unsafe_allow_html=True)
-                                with cc3: st.link_button("Git", off['link'])
-                                st.divider()
-                        else: st.caption("Henüz mağaza fiyatı yok.")
-                        
-                        # BENZERSİZ KEY
-                        if st.button("🔍 Detaylı İncele", key=f"src_dt_{game['title']}_{i}"): go_detail(game)
-                    st.markdown("---")
-        else: st.warning("Sonuç bulunamadı.")
-    except Exception as e: st.error(str(e))
+    grouped = {}
+    
+    # Önce Steam Sonucunu Ekle (En Doğru)
+    if steam_res:
+        grouped[steam_res['steamAppID']] = {
+            "title": term.title(), # Tam isim Steam'den gelmeyebilir, arananı yazalım
+            "thumb": steam_res['thumb'],
+            "meta": 0, "user": 0, "dealID": steam_res['dealID'],
+            "steamAppID": steam_res['steamAppID'],
+            "price": steam_res['price'],
+            "store": "Steam (TR)",
+            "offers": [{"store": "Steam (TR)", "price": steam_res['price'], "link": f"https://store.steampowered.com/app/{steam_res['steamAppID']}"}]
+        }
+
+    # CheapShark Sonuçlarını Ekle (Varsa)
+    for deal in deals:
+        price_tl = f"{int(float(deal['salePrice']) * dolar_kuru)} TL"
+        # Eğer Steam'den zaten bulduysak CheapShark'ı atla
+        if deal.get('steamAppID') not in grouped:
+             grouped[deal.get('steamAppID', deal['dealID'])] = {
+                "title": deal['title'],
+                "thumb": get_game_image(deal),
+                "meta": int(deal['metacriticScore']),
+                "user": int(deal['steamRatingPercent']),
+                "dealID": deal['dealID'],
+                "steamAppID": deal.get('steamAppID'),
+                "price": price_tl,
+                "store": "Steam" if deal['storeID'] == "1" else "Epic",
+                "offers": [{"store": "Mağaza", "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={deal['dealID']}"}]
+             }
+
+    if grouped:
+        st.success(f"✅ {len(grouped)} oyun bulundu.")
+        for i, (key, game) in enumerate(grouped.items()):
+            with st.container():
+                c1, c2, c3 = st.columns([1.5, 2.5, 3])
+                with c1: st.image(game['thumb'], use_container_width=True)
+                with c2: 
+                    st.subheader(game['title'])
+                    sub_n, sub_cls = check_subscription(game['title'])
+                    if sub_n:
+                        st.markdown(f"<span class='badge-container {sub_cls}'>{sub_n} DAHİL</span>", unsafe_allow_html=True)
+                    st.write("")
+                    if game.get('meta', 0) > 0: 
+                        mc=get_meta_color(game['meta'])
+                        st.markdown(f"<span class='score-badge {mc}'>Meta: {game['meta']}</span>", unsafe_allow_html=True)
+                with c3:
+                    st.write("**Fiyatlar**")
+                    for off in game['offers']:
+                        cl1, cl2, cl3 = st.columns([3, 2, 2])
+                        with cl1: st.write(f"**{off.get('store', 'Mağaza')}**")
+                        with cl2: st.markdown(f"<span class='price-big'>{off['price']}</span>", unsafe_allow_html=True)
+                        with cl3: st.link_button("Git", off['link'])
+                        st.divider()
+                    
+                    if st.button("🔍 Detaylı İncele", key=f"src_dt_{key}_{i}"): go_detail(game)
+                st.markdown("---")
+    else: st.warning("Sonuç bulunamadı.")
