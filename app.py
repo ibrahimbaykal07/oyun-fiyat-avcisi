@@ -8,7 +8,7 @@ import math
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
 PAGE_SIZE = 12
-PLACEHOLDER_IMG = "https://placehold.co/600x900/222/FFF/png?text=Gorsel+Yok"
+PLACEHOLDER_IMG = "https://placehold.co/600x300/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
 RAWG_API_KEY = "c1e963e178f3416f97f7840a127af77b"
 
 # --- 2. GÖMÜLÜ LOGOLAR ---
@@ -31,7 +31,7 @@ st.markdown("""
 <style>
     .block-container { padding-top: 2rem; }
     .kur-kutusu { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #495057; font-size: 0.9em; text-align: center; border: 1px solid #dee2e6; }
-    div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 2/3; object-fit: cover; }
+    div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 16/9; object-fit: cover; }
     .vitrin-title { font-size: 0.9em; font-weight: bold; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
     .vitrin-price { font-size: 1.1em; font-weight: bold; color: #28a745; margin: 2px 0; }
     .vitrin-date { font-size: 0.75em; color: #666; margin-bottom: 5px; font-style: italic; }
@@ -120,34 +120,46 @@ def show_gallery_modal(media_list, start_idx=0):
         st.caption(f"📷 Görsel {idx + 1} / {len(media_list)}")
     st.markdown(f"<div style='text-align:center; color:#888; font-size:0.8em;'>Diğer medyaya geçmek için yukarıdaki kaydırıcıyı kullanın.</div>", unsafe_allow_html=True)
 
-# --- AKILLI RAWG ARAMA ---
+# --- ÇOKLU KAYNAKLI GÖRSEL AVCISI (STEAM + RAWG) ---
 @st.cache_data(ttl=3600)
-def fetch_rawg_data(game_name):
-    # İsim Temizle
-    clean_name = re.sub(r'\(.*?\)', '', game_name)
-    search_queries = [
-        clean_name, 
-        clean_name.split(':')[0],
-        clean_name.replace('.', '').replace(':', ''),
-        " ".join(clean_name.split()[:2])
-    ]
-    if "fc 26" in game_name.lower(): search_queries = ["EA Sports FC 25"]
+def fetch_best_image(game_name):
+    """
+    Oyun görseli bulmak için Steam -> RAWG sıralamasını kullanır.
+    FC 26 gibi olmayan oyunlar için manuel görsel atar.
+    """
+    
+    # 1. Manuel Düzeltmeler (Henüz Görseli Olmayanlar)
+    name_lower = game_name.lower()
+    if "fc 26" in name_lower: return "https://cdn.akamai.steamstatic.com/steam/apps/2195250/header.jpg" # FC 25 görseli (Geçici)
+    if "madden nfl 26" in name_lower: return "https://cdn.akamai.steamstatic.com/steam/apps/2582560/header.jpg" # Madden 25
+    if "f1 25" in name_lower: return "https://cdn.akamai.steamstatic.com/steam/apps/2488620/header.jpg" # F1 24
+    
+    # İsim Temizleme (Noktalama, Yıl vb.)
+    clean_name = re.sub(r'\(.*?\)', '', game_name).replace(':', '').replace('.', '')
+    
+    # 2. STEAM ARAMA (En Kaliteli Görsel)
+    try:
+        steam_url = f"https://store.steampowered.com/api/storesearch/?term={clean_name}&l=turkish&cc=tr"
+        r = requests.get(steam_url, timeout=2)
+        if r.status_code == 200:
+            data = r.json()
+            if data['total'] > 0:
+                item = data['items'][0]
+                # Steam Header Görseli (Yüksek Kalite)
+                return f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{item['id']}/header.jpg"
+    except: pass
 
-    for query in search_queries:
-        if len(query) < 2: continue
-        try:
-            url = f"https://api.rawg.io/api/games?key={RAWG_API_KEY}&search={query}&page_size=1"
-            r = requests.get(url, timeout=2)
-            if r.status_code == 200:
-                data = r.json()
-                if data['results']:
-                    res = data['results'][0]
-                    # İsim benzerliği kontrolü (Alakasız sonuçları engelle)
-                    if query.lower() in res['name'].lower() or res['name'].lower() in query.lower():
-                        if res.get('background_image'):
-                            return {"image": res.get('background_image'), "meta": res.get('metacritic', 0)}
-        except: pass
-    return None
+    # 3. RAWG ARAMA (Yedek)
+    try:
+        rawg_url = f"https://api.rawg.io/api/games?key={RAWG_API_KEY}&search={clean_name}&page_size=1"
+        r = requests.get(rawg_url, timeout=2)
+        if r.status_code == 200:
+            data = r.json()
+            if data['results']:
+                return data['results'][0].get('background_image')
+    except: pass
+
+    return PLACEHOLDER_IMG
 
 def get_dollar_rate():
     try:
@@ -166,7 +178,6 @@ def get_game_image(deal):
     return PLACEHOLDER_IMG
 
 def get_meta_color(score):
-    # None kontrolü (Hata Çözümü)
     if score is None: score = 0
     if score >= 75: return "meta-green"
     elif score >= 50: return "meta-yellow"
@@ -317,26 +328,27 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
     batch = game_names[start:end]
     results = []
     
-    for name in batch:
+    for i, name in enumerate(batch):
+        # Varsayılan Obje (Garantili)
         game_obj = {
             "title": name,
             "thumb": PLACEHOLDER_IMG,
-            "meta": 0, "user": 0, "dealID": None, "steamAppID": "0",
+            "meta": 0, "user": 0,
+            "dealID": f"sub_{sub_name}_{start + i}", # ÇAKIŞMA ÖNLEYİCİ ID
+            "steamAppID": "0",
             "price": "---", "discount": 0.0, "store": sub_name, "offers": []
         }
         
-        # 1. RAWG API (Görsel ve Meta)
-        rawg = fetch_rawg_data(name)
-        if rawg:
-            if rawg['image']: game_obj["thumb"] = rawg['image']
-            if rawg['meta']: game_obj["meta"] = rawg['meta']
+        # 1. GÖRSEL ARA (Steam > RAWG)
+        best_img = fetch_best_image(name)
+        if best_img: game_obj["thumb"] = best_img
         
-        # 2. CheapShark (Fiyat - Timeout Artırıldı)
+        # 2. FİYAT (CheapShark)
         if game_obj["thumb"] == PLACEHOLDER_IMG:
             try:
                 search_name = name.split(':')[0]
                 url = f"https://www.cheapshark.com/api/1.0/deals?title={search_name}&exact=0&limit=1"
-                r = requests.get(url, timeout=3.0) # SÜRE ARTIRILDI (Hata Çözümü)
+                r = requests.get(url, timeout=1.0)
                 if r.status_code == 200:
                     d = r.json()
                     if d:
@@ -403,6 +415,7 @@ if st.session_state.active_page == 'home':
                         c_p, c_d = st.columns([2, 1])
                         c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
+                        # BENZERSİZ KEY
                         if st.button("İncele", key=f"home_btn_{limit_key}_{i}_{j}"): go_detail(g)
             st.write("")
         if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"): increase_home_limit(limit_key)
@@ -432,6 +445,7 @@ elif st.session_state.active_page == 'category':
                         st.image(g['thumb'], use_container_width=True)
                         st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
+                        # BENZERSİZ KEY
                         if st.button("İncele", key=f"cat_btn_{curr_page}_{i}_{j}"): go_detail(g)
             st.write("")
         st.markdown("---")
@@ -448,8 +462,8 @@ elif st.session_state.active_page == 'category':
 elif st.session_state.active_page == 'detail':
     game = st.session_state.selected_game
     if game['thumb'] == PLACEHOLDER_IMG:
-        rawg = fetch_rawg_data(game['title'])
-        if rawg and rawg['image']: game['thumb'] = rawg['image']
+        img_url = fetch_best_image(game['title'])
+        if img_url: game['thumb'] = img_url
 
     desc, media_list, req_min, req_rec = get_steam_details_turkish(game.get('steamAppID'))
     c1, c2 = st.columns([1.5, 2.5])
@@ -461,11 +475,8 @@ elif st.session_state.active_page == 'detail':
             if st.button(f"Tüm {sub_n} Listesi", key="sub_link"): go_category(sub_n, None, None, True)
     with c2:
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
-        mc_score = game.get('meta')
-        if mc_score is None: mc_score = 0
-        mc_color = get_meta_color(mc_score)
-        
-        st.markdown(f"""<div style="margin-bottom:15px;"><span class='score-badge {mc_color}'>Metacritic: {mc_score}</span><span class='score-badge user-blue'>Steam User: %{game.get('user', 0)}</span></div>""", unsafe_allow_html=True)
+        mc = get_meta_color(game.get('meta', 0))
+        st.markdown(f"""<div style="margin-bottom:15px;"><span class='score-badge {mc}'>Metacritic: {game.get('meta', 0)}</span><span class='score-badge user-blue'>Steam User: %{game.get('user', 0)}</span></div>""", unsafe_allow_html=True)
         if desc: st.markdown(f"<div class='desc-box'>{desc}</div>", unsafe_allow_html=True)
         st.write("### 🏷️ Mağaza Fiyatları")
         offers = game.get('offers', [])
@@ -549,8 +560,8 @@ elif st.session_state.active_page == 'search':
             for sub, games in SUBSCRIPTIONS.items():
                 for g_name in games:
                     if term.lower() in g_name.lower():
-                        rawg = fetch_rawg_data(g_name)
-                        thumb = rawg['image'] if rawg and rawg['image'] else PLACEHOLDER_IMG
+                        img_url = fetch_best_image(g_name)
+                        thumb = img_url if img_url else PLACEHOLDER_IMG
                         grouped[g_name.title()] = {
                             "title": g_name.title(), "thumb": thumb,
                             "meta": 0, "user": 0, "sort_score": 0, "offers": [], "steamAppID": "0"
