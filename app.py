@@ -1,23 +1,23 @@
 import streamlit as st
 import requests
+import json
+import math
 import streamlit.components.v1 as components
 from datetime import datetime
-import math
 
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
 PAGE_SIZE = 12
-PLACEHOLDER_IMG = "https://placehold.co/600x900/222/FFF/png?text=Resim+Yok"
+PLACEHOLDER_IMG = "https://placehold.co/600x900/222/FFF/png?text=Gorsel+Yok"
 
-# --- 2. GÖMÜLÜ LOGOLAR (BASE64) ---
+# --- 2. GÖMÜLÜ LOGOLAR ---
 ICON_GAMEPASS = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAABmJLR0QA/wD/AP+gvaeTAAAHpElEQVRoge2ZbWxT1xXHf+f62Q87iZ04L0kIJCWtlJIOtGVTWxmD+rGq6zc2qAS1q1SfKtWqTZu0amo/bFq1atKmH9a2WhWqMvhRRa10TEpLw4OytDQJIZCEOGDi2E6c2I/r+52H4iQk3xsnIXxJz9u995xz/vf+z733nOsr8T/hIr9vA25WbgfkduV2QG5XblqQe9/9Y41S6iGl1DpN00o0TSsRQihN00oqpZRSSimllBJCqL/89Y+dNyXIX/76Z61KqacB3bZtVNM02raNpmm4XC6cTidOp7NojFJKKaXUv/7y504A7/3xL53FfS8aZH+/97BS6mnA8Pv9eL1efD4fPp8Pt9uN2+3G5XLhcDhQSiGlxDAMDMNASomUki+++OIy8O7v/3CyqP9Fg/z5b38yAH22bdPa2kpbWxttbW10dHALPp8Pt9t9Q4OUUmiahmEYSCmRUuLxePB4PCilEEJgGAYG8O7v/9hfNMi+fe91KaWeBvRQKCQOHz5MOBwmEAhgWRamaaJp2o0NApBlWdm2bV+3bp04fPgwlmVl4zRNQ9M0lFIEAgF8Ph9SSvR3fvfH/qJBAPr+/u91AE3TtOzAgQMEAgEGBwexLAtN07AsC8uybnqQUgpd1zN1dXX6+vXrRV9fH4ZhoGkaTqcTTdMwDAPDMPB6vfi8Poy3f180CMAA9HA4LA8dOkR/fz+WZRVC0DQNwzAoFfF4XJ9z587R2trK5cuXMU0TISSeogdBSommaYRCIQKBALZt4933+7+u+k8Kct97f6gFaJqmyYMHDxIOhzFNE8uysCwLwzCQUha1l1LyySefsHz5clpaWrAsC8MwcDgc2LaNZVmYpollWViWhWVZSCkRQrBixQqCQa/445/+vKpoEICmaVp28OBBQqEQlmVlQZRSNzcIoK+vj4aGBpqbmzEMg4qKCtasWcORI0fwer2YponT6cQwDCzLwrIsdF3H6/USCoUwTfONIkEAhm3b8tChQwSDQSzLyobouo7D4cCyrKJ2Ukq6u7tZvHgxixYtAuDgwYMsXbqU6urqbJyu6xiGgWVZSCnx+/0EAgFM08R7f//H/qJBAPq2bdt04MABBgYGMAwDIdA0DafTiZQS0zSL2g3DIBwO09DQgMPhwLIsuru7qaurw+12YxgGlmXB1VBD13U8Hg/BcIhgMIhhGHj3vfdH0SAADdu25aFDhwgGg1iWhWEY6LqOw+HAsiwMw8A0zaJ20zQZHh6mqamJYDCIlJLu7m6WLVuG1+vFMAwsy8K2bSzLQtM0PB4PgUCAYDCIaZp4f/eH40WD7Hv3D7UAw7ZtefDgQYLBIIZhoGkagUAAt9t9w4MopRgYGGDp0qV0dXWRTCbp7u6mubmZsrIyDMO4OkjXdbxeL8FgkGAwiGmaGG/v/33RIADdNM3s4cOHCQQCWJaFaZpIKSkrK7vhQZRSJBIJmpqa6OrqIpVK0dPTQ3NzM+Xl5RiGgWVZWJaFpmlIKSkrKyMYDBIMBrEsC+Ptf/x90SAADdM05aFDhwgGg1iWheFwYBgGbre7qL2UksHBQZqbm+nu7iaVStHd3U1zczPl5eUYhoFlWViWhRCCsrIygsEggUAASQnvvv/H40WDAAzTNOXBgwfp7+/HNE0Mw8DpdOL1eolGo0XtpZQMDAzQ3NxMV1cXqVSK7u5uFi5cSFlZGYZhoOs6lmVlQcrKyggGgwQCASzLwnj3D38sGuTf//rnDqA3DEMSDAaJRCJIKXE4HDidTrxeL16PB9M0MU2zqN0wDPr6+li5ciV1dXUAHD16lJaWFrxeL4ZhYFkWlmWh6zper5dgMIhpmhBCvPXeH/uLBtm3770O4A3btunv7ycajSKlxOVy4fV68fl8SCkxDKNonGma9Pb20tjYyKpVqwDo6+ujubkZr9eLYRhYloVlWej/h2AwSCgUwrIsjHfe/6NfCLHnBrd9773XAXzHtm06ePAgkUgEKSVOpxOv14vP50PXdUzTLBpnmiY9PT00NjbS3t4OwNGjR1m+fDlerxfDMLAsC9u20XUdt9tNMHg1SMMw8N7Z98fios+I/f3ew8BbwJvxeJwTJ06QTCaRUuJ0OvF4PHi9XlzXF2WK2g3DoKenB4fDQX19PQCHDx+mubkZr9eLYRjYto1t2+i6jtfrJRgMEg6HMQzjDfr7vccX3SD73nqvBfgO8FZbWxtdXV2kUimklLhcLrxeLz6fD13XMU2zaJxpmvT09NDQ0EB7ezsAR48eZcWKFXi9XgzDwLZtbNtG13W8Xi/BYJBwOIxpmhivv/fH4qLPiP393sPAd4C3Tpw4QWtrK8lkEiklrut3wuPxoOs6pmnedIdhGHR3d+NwOGhoaADg8OHDLF++HK/Xi2EY2LaNbdu4XC68Xi/BYJBwOIxhGG+w790/Hl90gwD0ffve6wD+DLw1ODjIsWPHSKVSCCFwOp14vV58Ph+6rmOaZtE40zTp6emhoaGB9vZ2AI4ePcpTTz2F1+vFMAxs28a2bVwul7/Ybn8A+K//fSfcrtwOyO3K7YDcrtwOyO3K/wHFw9x42M/CTAAAAABJRU5ErkJggg=="
 ICON_EA = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0ZGODU1NSI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTMuNSA3aC0zLjV2Mi41aDN2MS41aC0zVjE2aDN2MS41aC00LjVWOGg0LjV6bS02IDBoLTMuNXY4aDQuNXYtMS41aC0zdi0yLjVoM3YtMS41aC0zVjkuNWgzLjV6Ii8+PC9zdmc+"
 ICON_UBI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwOTlGRiI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMTcuNWMtMy4wMyAwLTUuNS0yLjQ3LTUuNS01LjVTOC45NyA5IDEyIDlzNS41IDIuNDcgNS41IDUuNS0yLjQ3IDUuNS01LjUgNS41em0wLTljLTEuOTMgMC0zLjUgMS41Ny0zLjUgMy41UzEwLjA3IDE1IDEyIDE1czMuNS0xLjU3IDMuNS0zLjUtMS41Ny0zLjUtMy41LTMuNXoiLz48L3N2Zz4="
 
 SUB_LOGOS = {"Game Pass": ICON_GAMEPASS, "EA Play": ICON_EA, "EA Play Pro": ICON_EA, "Ubisoft+": ICON_UBI}
-SUB_COLORS = {"Game Pass": "#107C10", "EA Play": "#FF4747", "EA Play Pro": "#FFD700", "Ubisoft+": "#0099FF"}
-SUB_BTN_LABELS = {"Game Pass": "🟩 Game Pass", "EA Play": "🟥 EA Play", "EA Play Pro": "🟧 EA Play Pro", "Ubisoft+": "🟦 Ubisoft+"}
 SUB_CLASSES = {"Game Pass": "badge-gamepass", "EA Play Pro": "badge-eapro", "EA Play": "badge-ea", "Ubisoft+": "badge-ubi"}
+SUB_BTN_LABELS = {"Game Pass": "🟩 Game Pass", "EA Play": "🟥 EA Play", "EA Play Pro": "🟧 EA Play Pro", "Ubisoft+": "🟦 Ubisoft+"}
 
 try:
     from epicstore_api import EpicGamesStoreAPI
@@ -57,39 +57,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. MANUEL LİSTE (GÜNCEL) ---
-SUBSCRIPTIONS = {
-    "Game Pass": [
-        "Call of Duty: Black Ops 6", "Modern Warfare III", "Diablo IV", "Starfield", "Forza Motorsport", "Forza Horizon 5", 
-        "Halo Infinite", "Microsoft Flight Simulator 2024", "Senua's Saga: Hellblade II", "S.T.A.L.K.E.R. 2", "Indiana Jones", 
-        "Avowed", "Persona 3 Reload", "Like a Dragon: Infinite Wealth", "Palworld", "Lies of P", "Cocoon", "Sea of Stars", 
-        "Hi-Fi RUSH", "Atomic Heart", "Wo Long", "A Plague Tale: Requiem", "Scorn", "Grounded", "High On Life", "Deathloop", 
-        "Ghostwire: Tokyo", "Minecraft", "Sea of Thieves", "Gears 5", "Doom Eternal", "Halo MCC", "Age of Empires IV", 
-        "Psychonauts 2", "Back 4 Blood", "Sniper Elite 5", "Monster Hunter Rise", "Assassin's Creed Valhalla", 
-        "Assassin's Creed Odyssey", "Far Cry 6", "Watch Dogs 2", "Rainbow Six Siege", "FIFA 23", "Battlefield 2042", 
-        "Mass Effect Legendary", "It Takes Two", "Need for Speed Unbound", "Jedi Fallen Order", "Titanfall 2", "The Sims 4", 
-        "Cities Skylines II", "Football Manager 2024", "Payday 3", "Darktide", "Remnant 2", "Hollow Knight", "Stardew Valley", 
-        "Vampire Survivors", "Valheim", "Among Us", "No Man's Sky", "Fallout 4", "Skyrim", "Control", "Dishonored 2", 
-        "Yakuza: Like a Dragon", "Persona 5 Royal", "Tunic", "Dead Cells", "Slay the Spire", "Celeste", "Undertale"
-    ],
-    "EA Play Pro": [
-        "EA SPORTS FC 25", "EA SPORTS FC 26", "Madden NFL 25", "F1 24", "Star Wars Jedi: Survivor", "Immortals of Aveum", 
-        "Wild Hearts", "Dead Space Remake", "Tales of Kenzera", "PGA Tour", "WRC 23", "Lost in Random", "Knockout City",
-        "It Takes Two", "Mass Effect Legendary", "Need for Speed Unbound", "Battlefield 2042"
-    ],
-    "EA Play": [
-        "EA SPORTS FC 24", "FIFA 23", "F1 23", "Madden NFL 24", "Battlefield 2042", "Battlefield V", "Jedi Fallen Order", 
-        "Battlefront II", "Mass Effect Legendary", "Titanfall 2", "The Sims 4", "Need for Speed Heat", "It Takes Two", 
-        "A Way Out", "Unravel Two", "Dragon Age Inquisition", "Crysis Remastered", "Dead Space 3", "Skate 3", "Mirror's Edge"
-    ],
-    "Ubisoft+": [
-        "Assassin's Creed Shadows", "Star Wars Outlaws", "Avatar: Frontiers of Pandora", "Prince of Persia: The Lost Crown", 
-        "Assassin's Creed Mirage", "The Crew Motorfest", "Skull and Bones", "Assassin's Creed Valhalla", "Far Cry 6", 
-        "Rainbow Six Siege", "The Division 2", "Ghost Recon Breakpoint", "Watch Dogs Legion", "Immortals Fenyx Rising", 
-        "Riders Republic", "Anno 1800", "For Honor", "The Crew 2", "Trackmania", "South Park", "Rayman Legends", "Splinter Cell"
-    ]
+# --- 4. MANUEL LİSTE (GÜNCEL YEDEK) ---
+# JSON Okuma Hatası Olursa Burası Kullanılır
+DEFAULT_SUBS = {
+    "Game Pass": ["Call of Duty: Black Ops 6", "Starfield", "Forza Horizon 5", "Minecraft"],
+    "EA Play Pro": ["EA SPORTS FC 25", "Madden NFL 25", "F1 24"],
+    "EA Play": ["FIFA 23", "Battlefield 2042"],
+    "Ubisoft+": ["Assassin's Creed Mirage", "Star Wars Outlaws"]
 }
 
+def load_subscriptions():
+    try:
+        with open('subscriptions.json', 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            if "_meta" in data: del data["_meta"]
+            return data
+    except:
+        return DEFAULT_SUBS
+
+SUBSCRIPTIONS = load_subscriptions()
 STORE_LOGOS = {"Steam": "https://cdn.simpleicons.org/steam/171a21", "Epic Games": "https://cdn.simpleicons.org/epicgames/333333", "Ubisoft Connect": "https://cdn.simpleicons.org/ubisoft/0099FF", "EA App": "https://cdn.simpleicons.org/ea/FF4747", "GOG": "https://cdn.simpleicons.org/gogdotcom/893CE7"}
 
 # --- 5. SESSION STATE ---
@@ -282,44 +268,49 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
     end = start + page_size
     batch = game_names[start:end]
     results = []
+    
     for name in batch:
-        # Manuel oluşturulmuş oyun objesi
+        # 1. Varsayılan (Manuel) Oyun Objeyi Oluştur
+        # Eğer API'den veri gelmezse bu gösterilecek (Garantili)
         game_obj = {
             "title": name,
             "thumb": PLACEHOLDER_IMG,
             "meta": 0,
             "user": 0,
-            "dealID": None,
-            "steamAppID": None,
-            "price": "---",
+            "dealID": f"man_{name.replace(' ', '_')}", # BENZERSİZ ID (Hata Çözücü)
+            "steamAppID": "0",
+            "price": "---", # Fiyat yok
             "discount": 0.0,
             "store": sub_name,
             "offers": []
         }
         
         try:
-            # API'den veri çekmeye çalış (Sade isimle)
+            # 2. API'ye Sor
             search_name = name.split(':')[0] if ':' in name else name 
             url = f"https://www.cheapshark.com/api/1.0/deals?title={search_name}&exact=0&limit=1"
-            r = requests.get(url, timeout=2)
+            r = requests.get(url, timeout=1.5) # Kısa timeout
+            
             if r.status_code == 200:
                 data = r.json()
                 if data:
                     d = data[0]
-                    price_tl = int(float(d['salePrice']) * dolar_kuru)
-                    game_obj.update({
-                        "title": d['title'],
-                        "thumb": get_game_image(d),
-                        "meta": int(d['metacriticScore']),
-                        "user": int(d['steamRatingPercent']),
-                        "dealID": d['dealID'],
-                        "steamAppID": d.get('steamAppID'),
-                        "price": price_tl,
-                        "discount": float(d['savings']),
-                        "store": "Steam" if d['storeID'] == "1" else "Epic",
-                        "offers": [{"store": "Mağaza", "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}"}]
-                    })
-        except: pass
+                    # İsim benzerliğini kontrol et (Alakasız oyun gelmesin)
+                    if search_name.lower() in d['title'].lower():
+                        price_tl = int(float(d['salePrice']) * dolar_kuru)
+                        game_obj.update({
+                            "title": d['title'],
+                            "thumb": get_game_image(d),
+                            "meta": int(d['metacriticScore']),
+                            "user": int(d['steamRatingPercent']),
+                            "dealID": d['dealID'],
+                            "steamAppID": d.get('steamAppID'),
+                            "price": price_tl,
+                            "discount": float(d['savings']),
+                            "store": "Steam" if d['storeID'] == "1" else "Epic",
+                            "offers": [{"store": "Mağaza", "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}"}]
+                        })
+        except: pass # API hatası olursa manuel obje kalır
         
         results.append(game_obj)
         
@@ -380,7 +371,8 @@ if st.session_state.active_page == 'home':
                         c_p, c_d = st.columns([2, 1])
                         c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
-                        if st.button("İncele", key=f"btn_{g['dealID']}"): go_detail(g)
+                        # BENZERSİZ KEY (Ana Sayfa)
+                        if st.button("İncele", key=f"home_btn_{g['dealID']}_{i}_{j}"): go_detail(g)
             st.write("")
         if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"): increase_home_limit(limit_key)
         st.markdown("---")
@@ -409,7 +401,9 @@ elif st.session_state.active_page == 'category':
                         st.image(g['thumb'], use_container_width=True)
                         st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
-                        if st.button("İncele", key=f"cat_btn_{g['dealID']}"): go_detail(g)
+                        # BENZERSİZ KEY (Kategori Sayfası - ID + Index)
+                        btn_key = f"cat_btn_{g['dealID']}_{i+j}"
+                        if st.button("İncele", key=btn_key): go_detail(g)
             st.write("")
         
         st.markdown("---")
@@ -419,7 +413,7 @@ elif st.session_state.active_page == 'category':
                 if p < 10:
                     with cols[p]:
                         b_type = "primary" if p == curr_page else "secondary"
-                        if st.button(str(p+1), key=f"page_{p}", type=b_type): set_page_num(p)
+                        if st.button(str(p+1), key=f"pg_{p}", type=b_type): set_page_num(p)
     else: st.info("Bu sayfada oyun yok.")
 
 # SAYFA: DETAY
@@ -516,7 +510,6 @@ elif st.session_state.active_page == 'search':
                 price_final = int(p_usd) if s_name in ["Steam", "Epic Games"] else int(p_usd * dolar_kuru)
                 grouped[title]["offers"].append({"store": s_name, "price": price_final, "link": final_link})
         
-        # Manuel Ekleme
         if not grouped:
             for sub, games in SUBSCRIPTIONS.items():
                 for g_name in games:
@@ -557,7 +550,9 @@ elif st.session_state.active_page == 'search':
                                 with cc3: st.link_button("Git", off['link'])
                                 st.divider()
                         else: st.caption("Henüz mağaza fiyatı yok.")
-                        if st.button("🔍 Detaylı İncele", key=f"src_dt_{game['title']}"): go_detail(game)
+                        
+                        # BENZERSİZ KEY (Arama Sayfası)
+                        if st.button("🔍 Detaylı İncele", key=f"src_dt_{game['title']}_{game.get('dealID', '0')}"): go_detail(game)
                     st.markdown("---")
         else: st.warning("Sonuç bulunamadı.")
     except Exception as e: st.error(str(e))
