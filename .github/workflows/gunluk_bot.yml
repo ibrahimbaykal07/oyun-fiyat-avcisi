@@ -21,11 +21,10 @@ jobs:
         with:
           python-version: '3.9'
 
-      # Chrome Tarayıcıyı Kuruyoruz
-      - name: Chrome Setup
+      - name: Chrome Tarayıcıyı Kur
         uses: browser-actions/setup-chrome@v1
 
-      - name: Kütüphaneleri Yükle
+      - name: Gerekli Kütüphaneleri Yükle
         run: |
           python -m pip install --upgrade pip
           pip install requests selenium webdriver-manager beautifulsoup4
@@ -33,9 +32,9 @@ jobs:
       - name: Robotu Çalıştır
         run: python update_bot.py
 
-      - name: Kaydet ve Gönder
+      - name: Değişiklikleri Kaydet
         run: |
           git config --global user.name 'OyunFiyatBotu'
           git config --global user.email 'bot@noreply.github.com'
           git add subscriptions.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 Selenium: Liste güncellendi" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 Güncelleme: Otomatik oyun listesi" && git push)
