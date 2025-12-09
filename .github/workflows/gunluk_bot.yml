@@ -1,0 +1,30 @@
+name: Oyun Listesi Robotu
+
+on:
+  schedule:
+    # Her gün UTC saatiyle 04:00'te (Türkiye saati ile 07:00) çalışır
+    - cron: '0 4 * * *'
+  workflow_dispatch: # Manuel tetikleme butonu ekler
+
+jobs:
+  update-games:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Depoyu Çek (Checkout)
+        uses: actions/checkout@v3
+
+      - name: Python Kur
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Robotu Çalıştır
+        run: python update_bot.py
+
+      - name: Değişiklikleri Kaydet ve Gönder (Commit & Push)
+        run: |
+          git config --global user.name 'OyunFiyatBotu'
+          git config --global user.email 'bot@noreply.github.com'
+          git add subscriptions.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "🤖 Robot: Oyun listesi güncellendi" && git push)
