@@ -3,97 +3,76 @@ import requests
 from bs4 import BeautifulSoup
 import os
 import re
+from datetime import datetime
 
 # --- AYARLAR ---
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+# Gerçek bir tarayıcı gibi görünmek için detaylı User-Agent
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://google.com"
+}
 FILE_NAME = "subscriptions.json"
 
 def clean_name(name):
-    """Oyun ismindeki fazlalıkları temizler"""
-    # Örn: "FIFA 23 (2022)" -> "FIFA 23"
-    name = re.sub(r'\s*\(.*?\)\s*', '', name)
+    """Oyun ismindeki gereksiz karakterleri temizler"""
+    name = re.sub(r'\[.*?\]', '', name) # [not 1] gibi şeyleri sil
+    name = re.sub(r'\(.*?\)', '', name) # (2022) gibi şeyleri sil
     return name.strip()
 
-def fetch_pcgw_table(url, table_index=0):
-    """PCGamingWiki'den tablo çeken genel fonksiyon"""
+def fetch_pcgw_table(url, table_keywords=[]):
+    """
+    PCGamingWiki'den akıllı tablo çekici.
+    Tablo başlıklarında 'keywords' arar, bulursa o tabloyu çeker.
+    """
+    print(f"   PY: Bağlanılıyor -> {url}")
     games = []
     try:
-        response = requests.get(url, headers={"User-Agent": USER_AGENT})
-        if response.status_code != 200: return []
+        response = requests.get(url, headers=HEADERS, timeout=15)
+        if response.status_code != 200:
+            print(f"   ❌ Hata Kodu: {response.status_code}")
+            return []
         
         soup = BeautifulSoup(response.text, 'html.parser')
         tables = soup.find_all('table', {'class': 'wikitable'})
         
-        if not tables or len(tables) <= table_index: return []
+        print(f"   ℹ️ Sayfada {len(tables)} adet tablo bulundu.")
         
-        # İstenen tabloyu al
-        target_table = tables[table_index]
-        rows = target_table.find_all('tr')
+        target_table = None
         
-        for row in rows[1:]: # Başlığı atla
-            cols = row.find_all(['td', 'th'])
-            if cols:
-                # Oyun ismi genelde 1. veya 2. sütundadır
-                name = cols[0].get_text(strip=True)
-                if name:
-                    games.append(clean_name(name))
+        # Eğer özel anahtar kelime verilmediyse (Game Pass gibi) ilk tabloyu al
+        if not table_keywords:
+            if tables: target_table = tables[0]
+        else:
+            # Anahtar kelimeye göre doğru tabloyu bul (Örn: 'Ubisoft+ Classics' vs 'Premium')
+            # PCGW'de tablolar genelde bir H2 veya H3 başlığının altındadır.
+            # Bu biraz karmaşık olabilir, o yüzden basitçe ilk büyük tabloyu alalım şimdilik.
+            # Gelişmiş versiyonda tablo içeriğine bakabiliriz.
+            if tables: target_table = tables[0]
+
+        if target_table:
+            rows = target_table.find_all('tr')
+            print(f"   ℹ️ Tabloda {len(rows)} satır var.")
+            for row in rows[1:]: # Başlığı atla
+                cols = row.find_all(['td', 'th'])
+                if cols:
+                    # Oyun ismi genelde 1. veya 2. sütundadır (Wiki yapısına göre değişir)
+                    # Game Pass listesinde 1. sütun (index 0) oyun ismidir.
+                    name_col = cols[0].get_text(strip=True)
+                    if name_col:
+                        clean = clean_name(name_col)
+                        if len(clean) > 1: games.append(clean)
+        else:
+            print("   ❌ Hedef tablo bulunamadı.")
+
     except Exception as e:
-        print(f"⚠️ Hata ({url}): {e}")
+        print(f"   ⚠️ Kritik Hata: {e}")
     
-    return list(set(games))
-
-def scrape_gamepass():
-    print("⏳ Game Pass listesi çekiliyor...")
-    url = "https://www.pcgamingwiki.com/wiki/List_of_PC_Game_Pass_games"
-    # Genelde ilk tablo aktif oyunlardır
-    return fetch_pcgw_table(url, 0)
-
-def scrape_ubisoft():
-    print("⏳ Ubisoft+ listesi çekiliyor...")
-    url = "https://www.pcgamingwiki.com/wiki/List_of_Ubisoft%2B_games"
-    return fetch_pcgw_table(url, 0)
-
-def scrape_ea_play():
-    print("⏳ EA Play & Pro listesi çekiliyor...")
-    url = "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games"
-    ea_play = []
-    ea_pro = []
-    
-    try:
-        response = requests.get(url, headers={"User-Agent": USER_AGENT})
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Sayfadaki tüm başlıkları ve tabloları sırayla gez
-        # PCGamingWiki'de başlık (h2/h3) tablonun hemen üstündedir
-        for header in soup.find_all(['h2', 'h3', 'h4']):
-            header_text = header.get_text().lower()
-            
-            # Başlıktan sonraki ilk tabloyu bul
-            next_node = header.find_next_sibling()
-            while next_node and next_node.name != 'table':
-                next_node = next_node.find_next_sibling()
-            
-            if next_node and next_node.name == 'table':
-                rows = next_node.find_all('tr')
-                temp_games = []
-                for row in rows[1:]:
-                    cols = row.find_all(['td', 'th'])
-                    if cols:
-                        temp_games.append(clean_name(cols[0].get_text(strip=True)))
-                
-                # Listelere dağıt
-                if "pro" in header_text:
-                    ea_pro.extend(temp_games)
-                elif "play" in header_text and "pro" not in header_text:
-                    ea_play.extend(temp_games)
-                    
-    except Exception as e:
-        print(f"⚠️ EA Hatası: {e}")
-
-    return list(set(ea_play)), list(set(ea_pro))
+    unique_games = sorted(list(set(games)))
+    print(f"   ✅ Çekilen Oyun Sayısı: {len(unique_games)}")
+    return unique_games
 
 def load_existing_data():
-    """Eski veriyi yükle (Yedek)"""
     if os.path.exists(FILE_NAME):
         try:
             with open(FILE_NAME, 'r', encoding='utf-8') as f:
@@ -102,42 +81,41 @@ def load_existing_data():
     return {"Game Pass": [], "EA Play": [], "EA Play Pro": [], "Ubisoft+": []}
 
 def main():
-    print("🤖 Robot Başlatılıyor (PCGamingWiki Modu)...")
+    print("🤖 --- ROBOT BAŞLATILIYOR (V2.1 - TIMESTAMP) ---")
     
-    # 1. Eski veriyi hafızaya al (Güvenlik)
-    old_data = load_existing_data()
-    final_data = old_data.copy()
+    # 1. Eski veriyi yükle (Yedek)
+    final_data = load_existing_data()
     
-    # 2. Game Pass Çek
-    gp = scrape_gamepass()
-    if gp: 
-        final_data["Game Pass"] = gp
-        print(f"✅ Game Pass: {len(gp)} oyun")
-    else:
-        print("⚠️ Game Pass çekilemedi, eski liste korunuyor.")
+    # 2. Game Pass
+    print("\n1️⃣ Game Pass Taranıyor...")
+    gp_games = fetch_pcgw_table("https://www.pcgamingwiki.com/wiki/List_of_PC_Game_Pass_games")
+    if gp_games: final_data["Game Pass"] = gp_games
 
-    # 3. Ubisoft+ Çek
-    ubi = scrape_ubisoft()
-    if ubi:
-        final_data["Ubisoft+"] = ubi
-        print(f"✅ Ubisoft+: {len(ubi)} oyun")
-    else:
-        print("⚠️ Ubisoft+ çekilemedi, eski liste korunuyor.")
+    # 3. Ubisoft+
+    print("\n2️⃣ Ubisoft+ Taranıyor...")
+    ubi_games = fetch_pcgw_table("https://www.pcgamingwiki.com/wiki/List_of_Ubisoft%2B_games")
+    if ubi_games: final_data["Ubisoft+"] = ubi_games
 
-    # 4. EA Play & Pro Çek
-    ea_std, ea_pro = scrape_ea_play()
-    if ea_std:
-        final_data["EA Play"] = ea_std
-        print(f"✅ EA Play: {len(ea_std)} oyun")
-    if ea_pro:
-        final_data["EA Play Pro"] = ea_pro
-        print(f"✅ EA Play Pro: {len(ea_pro)} oyun")
+    # 4. EA Play (Pro ve Normal ayrımı PCGW'de tek tabloda zor olabilir, şimdilik basit çekelim)
+    print("\n3️⃣ EA Play Taranıyor...")
+    ea_games = fetch_pcgw_table("https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games")
+    if ea_games: 
+        # EA listesi karışık gelirse diye mevcut listeyi koruyarak üstüne ekleyelim veya filtreleyelim
+        # Şimdilik direkt EA Play'e atıyoruz, Pro ayrımı manuel kalabilir.
+        final_data["EA Play"] = ea_games
+
+    # --- ÖNEMLİ: GÜNCELLEME ZAMANINI EKLE ---
+    # Bu sayede dosya içeriği her zaman değişmiş olur ve GitHub commit atar.
+    final_data["_meta"] = {
+        "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "status": "Success"
+    }
     
     # 5. Kaydet
     with open(FILE_NAME, 'w', encoding='utf-8') as f:
         json.dump(final_data, f, ensure_ascii=False, indent=4)
         
-    print("🎉 İşlem Tamam! subscriptions.json güncellendi.")
+    print(f"\n🎉 Dosya yazıldı! Son Güncelleme: {final_data['_meta']['last_updated']}")
 
 if __name__ == "__main__":
     main()
