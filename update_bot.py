@@ -12,112 +12,165 @@ HEADERS = {
 FILE_NAME = "subscriptions.json"
 
 def clean_name(name):
-    # Dipnotları ve parantezleri temizle: "Halo Infinite[2]" -> "Halo Infinite"
+    """Oyun ismindeki [1], (2022) gibi fazlalıkları temizler"""
     name = re.sub(r'\[.*?\]', '', name)
     name = re.sub(r'\(.*?\)', '', name)
-    # Satır sonu boşluklarını temizle
     return name.strip()
 
-def fetch_from_pcgamingwiki(url):
-    """PCGamingWiki'den Tabloları Çeker"""
-    print(f"   PY: Bağlanılıyor -> {url}")
+def is_cell_green(cell):
+    """Bir hücrenin (td) 'Yeşil Tik' içerip içermediğini kontrol eder"""
+    if not cell: return False
+    # PCGamingWiki'de yeşil hücreler 'table-yes' sınıfına sahiptir
+    classes = cell.get('class', [])
+    if any("table-yes" in c for c in classes):
+        return True
+    # Bazen yazı olarak "Available" yazar
+    if "available" in cell.get_text().lower():
+        return True
+    return False
+
+def get_column_index(headers, keyword):
+    """Tablo başlıkları arasında aranan kelimenin kaçıncı sırada olduğunu bulur"""
+    for i, h in enumerate(headers):
+        if keyword.lower() in h.get_text(strip=True).lower():
+            return i
+    return -1
+
+def scrape_pcgw_gamepass():
+    print("⏳ Game Pass taranıyor...")
+    url = "https://www.pcgamingwiki.com/wiki/List_of_PC_Game_Pass_games"
     games = []
     
     try:
         response = requests.get(url, headers=HEADERS, timeout=30)
         soup = BeautifulSoup(response.text, 'html.parser')
+        table = soup.find('table', {'class': 'wikitable'}) # İlk büyük tablo
         
-        # 'wikitable' sınıfına sahip tüm tabloları bul
-        tables = soup.find_all('table', {'class': 'wikitable'})
-        
-        for table in tables:
-            # Tablo başlıklarını kontrol et (Removed/Left tablolarını atla)
-            headers = [th.get_text().lower() for th in table.find_all('th')]
-            header_text = " ".join(headers)
+        if table:
+            # Başlıkları analiz et
+            headers = table.find_all('th')
+            name_idx = 0 # Genelde ilk sütun isimdir
+            # "Game Pass for PC" sütununu bul
+            check_idx = get_column_index(headers, "Game Pass for PC")
             
-            if "removed" in header_text or "left" in header_text:
-                continue # Bu tablo eski oyunlar, atla.
+            if check_idx == -1: 
+                print("   ⚠️ 'Game Pass for PC' sütunu bulunamadı, varsayılan 3. sütun deneniyor.")
+                check_idx = 3 # Yedek tahmin
             
             # Satırları gez
-            rows = table.find_all('tr')
-            for row in rows[1:]:
+            rows = table.find_all('tr')[1:]
+            for row in rows:
                 cols = row.find_all(['td', 'th'])
-                if cols:
-                    # Oyun ismi genelde ilk sütundadır
-                    raw_name = cols[0].get_text(strip=True)
-                    name = clean_name(raw_name)
-                    if len(name) > 1:
-                        games.append(name)
+                if len(cols) > check_idx:
+                    # İlgili kutucuk yeşil mi?
+                    if is_cell_green(cols[check_idx]):
+                        game_name = cols[name_idx].get_text(strip=True)
+                        games.append(clean_name(game_name))
                         
     except Exception as e:
-        print(f"   ⚠️ Hata: {e}")
+        print(f"   ❌ Hata: {e}")
         
-    return list(set(games)) # Tekrarları sil ve döndür
+    print(f"   ✅ {len(games)} oyun bulundu.")
+    return list(set(games))
+
+def scrape_pcgw_ea():
+    print("⏳ EA Play & Pro taranıyor...")
+    url = "https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games"
+    ea_play = []
+    ea_pro = []
+    
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=30)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        table = soup.find('table', {'class': 'wikitable'})
+        
+        if table:
+            headers = table.find_all('th')
+            name_idx = 0
+            
+            # Sütunları bul
+            play_idx = get_column_index(headers, "EA App") # Normal EA Play
+            pro_idx = get_column_index(headers, "EA Play Pro") # Pro
+            
+            rows = table.find_all('tr')[1:]
+            for row in rows:
+                cols = row.find_all(['td', 'th'])
+                if len(cols) > max(play_idx, pro_idx):
+                    game_name = clean_name(cols[name_idx].get_text(strip=True))
+                    
+                    # Normal EA Play Kontrolü
+                    if play_idx != -1 and is_cell_green(cols[play_idx]):
+                        ea_play.append(game_name)
+                        
+                    # Pro Kontrolü
+                    if pro_idx != -1 and is_cell_green(cols[pro_idx]):
+                        ea_pro.append(game_name)
+                        
+    except Exception as e:
+        print(f"   ❌ Hata: {e}")
+        
+    print(f"   ✅ Play: {len(ea_play)} | Pro: {len(ea_pro)}")
+    return list(set(ea_play)), list(set(ea_pro))
+
+def scrape_pcgw_ubisoft():
+    print("⏳ Ubisoft+ taranıyor...")
+    url = "https://www.pcgamingwiki.com/wiki/List_of_Ubisoft%2B_games"
+    games = []
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=30)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        table = soup.find('table', {'class': 'wikitable'})
+        
+        if table:
+            rows = table.find_all('tr')[1:]
+            for row in rows:
+                cols = row.find_all(['td', 'th'])
+                if cols:
+                    # Ubisoft sayfasında sadece oyun ismi yeterli
+                    game_name = cols[0].get_text(strip=True)
+                    games.append(clean_name(game_name))
+    except Exception as e:
+        print(f"   ❌ Hata: {e}")
+        
+    print(f"   ✅ {len(games)} oyun bulundu.")
+    return list(set(games))
 
 def load_existing_data():
-    """Mevcut dosyayı yükle (Veri kaybını önlemek için)"""
     if os.path.exists(FILE_NAME):
         try:
             with open(FILE_NAME, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except: pass
-    
-    # Dosya yoksa varsayılan boş şablon
-    return {
-        "Game Pass": [],
-        "EA Play": [],
-        "EA Play Pro": [],
-        "Ubisoft+": []
-    }
+    return {"Game Pass": [], "EA Play": [], "EA Play Pro": [], "Ubisoft+": []}
 
 def main():
-    print("🤖 --- ROBOT BAŞLATILIYOR (V4.0 - ROBUST) ---")
+    print("🤖 --- ROBOT BAŞLATILIYOR (V5 - YEŞİL TİK MODU) ---")
     
     final_data = load_existing_data()
     
-    # 1. GAME PASS
-    print("\n1️⃣ Game Pass Taranıyor...")
-    gp_new = fetch_from_pcgamingwiki("https://www.pcgamingwiki.com/wiki/List_of_PC_Game_Pass_games")
-    if len(gp_new) > 100: # En az 100 oyun bulduysa güncelle (Güvenlik Limiti)
-        final_data["Game Pass"] = gp_new
-        print(f"   ✅ Güncellendi: {len(gp_new)} oyun.")
-    else:
-        print(f"   ⚠️ Yetersiz veri ({len(gp_new)}), eski liste korunuyor.")
-
-    # 2. UBISOFT+
-    print("\n2️⃣ Ubisoft+ Taranıyor...")
-    ubi_new = fetch_from_pcgamingwiki("https://www.pcgamingwiki.com/wiki/List_of_Ubisoft%2B_games")
-    if len(ubi_new) > 20:
-        final_data["Ubisoft+"] = ubi_new
-        print(f"   ✅ Güncellendi: {len(ubi_new)} oyun.")
-    else:
-        print(f"   ⚠️ Yetersiz veri ({len(ubi_new)}), eski liste korunuyor.")
-
-    # 3. EA PLAY (Link değişti, daha temiz liste)
-    print("\n3️⃣ EA Play Taranıyor...")
-    ea_new = fetch_from_pcgamingwiki("https://www.pcgamingwiki.com/wiki/List_of_EA_Play_games")
-    if len(ea_new) > 20:
-        # PCGamingWiki'de Play ve Pro genelde karışık veya tek tablodur.
-        # Basit çözüm: Hepsini EA Play'e at, Pro listesini manuel koru.
-        final_data["EA Play"] = ea_new
-        print(f"   ✅ Güncellendi: {len(ea_new)} oyun.")
+    # 1. Game Pass
+    gp_new = scrape_pcgw_gamepass()
+    if len(gp_new) > 50: final_data["Game Pass"] = gp_new
     
-    # 4. EA PLAY PRO (Manuel Koruma / Güncelleme)
-    # Pro listesi çok spesifik olduğu için (FC 26 vb.) silinmesini istemiyoruz.
-    if "EA Play Pro" not in final_data or len(final_data["EA Play Pro"]) < 5:
-        final_data["EA Play Pro"] = ["FC 26", "FC 25", "F1 24", "Madden NFL 25", "Star Wars Jedi: Survivor", "Immortals of Aveum", "Wild Hearts", "Dead Space Remake"]
+    # 2. EA Play & Pro
+    ea_new, pro_new = scrape_pcgw_ea()
+    if len(ea_new) > 10: final_data["EA Play"] = ea_new
+    if len(pro_new) > 5: final_data["EA Play Pro"] = pro_new
     
-    # --- ZAMAN DAMGASI (GITHUB GÜNCELLESİN DİYE) ---
+    # 3. Ubisoft+
+    ubi_new = scrape_pcgw_ubisoft()
+    if len(ubi_new) > 10: final_data["Ubisoft+"] = ubi_new
+    
+    # Zaman Damgası
     final_data["_meta"] = {
-        "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "status": "Success"
+        "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     
-    # KAYDET
+    # Kaydet
     with open(FILE_NAME, 'w', encoding='utf-8') as f:
         json.dump(final_data, f, ensure_ascii=False, indent=4)
         
-    print("\n🎉 İşlem Tamamlandı.")
+    print("\n🎉 Veritabanı başarıyla güncellendi.")
 
 if __name__ == "__main__":
     main()
