@@ -8,9 +8,9 @@ import re
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
 PAGE_SIZE = 12
 PLACEHOLDER_IMG = "https://placehold.co/600x900/222/FFF/png?text=Gorsel+Yok"
-RAWG_API_KEY = "c1e963e178f3416f97f7840a127af77b" # Senin anahtarın
+RAWG_API_KEY = "c1e963e178f3416f97f7840a127af77b" # Senin Anahtarın
 
-# --- 2. GÖMÜLÜ LOGOLAR ---
+# --- 2. LOGOLAR & RENKLER ---
 ICON_GAMEPASS = "data:image/png;base64,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"
 ICON_EA = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI0ZGODU1NSI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTMuNSA3aC0zLjV2Mi41aDN2MS41aC0zVjE2aDN2MS41aC00LjVWOGg0LjV6bS02IDBoLTMuNXY4aDQuNXYtMS41aC0zdi0yLjVoM3YtMS41aC0zVjkuNWgzLjV6Ii8+PC9zdmc+"
 ICON_UBI = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzAwOTlGRiI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTAgMTcuNWMtMy4wMyAwLTUuNS0yLjQ3LTUuNS01LjVTOC45NyA5IDEyIDlzNS41IDIuNDcgNS41IDUuNS0yLjQ3IDUuNS01LjUgNS41em0wLTljLTEuOTMgMC0zLjUgMS41Ny0zLjUgMy41UzEwLjA3IDE1IDEyIDE1czMuNS0xLjU3IDMuNS0zLjUtMS41Ny0zLjUtMy41LTMuNXoiLz48L3N2Zz4="
@@ -119,28 +119,52 @@ def show_gallery_modal(media_list, start_idx=0):
         st.caption(f"📷 Görsel {idx + 1} / {len(media_list)}")
     st.markdown(f"<div style='text-align:center; color:#888; font-size:0.8em;'>Diğer medyaya geçmek için yukarıdaki kaydırıcıyı kullanın.</div>", unsafe_allow_html=True)
 
-# --- AKILLI GÖRSEL AVCISI (RAWG) ---
+# --- AKILLI RAWG ARAMA ---
 @st.cache_data(ttl=3600)
 def fetch_rawg_data(game_name):
-    """RAWG API'den Görsel Çeker (İsim Temizleyerek)"""
-    # 1. FC 26 gibi özel durumlar için yedekleme
-    if "fc 26" in game_name.lower(): return None # FC 26 henüz çıkmadı, placeholder kalsın
+    """Gelişmiş Görsel Bulucu (İsim Temizleme + Kademeli Arama)"""
     
-    # 2. İsim Temizle (Örn: "S.T.A.L.K.E.R. 2" -> "Stalker 2")
-    clean_name = game_name.replace('.', '').replace(':', '')
+    # 1. İsmi Temizle (Noktalama, Yıl, Alt Başlık)
+    # Örn: "S.T.A.L.K.E.R. 2: Heart of Chornobyl" -> "Stalker 2"
+    # Örn: "Call of Duty: Black Ops 6" -> "Call of Duty Black Ops 6"
     
-    try:
-        url = f"https://api.rawg.io/api/games?key={RAWG_API_KEY}&search={clean_name}&page_size=1"
-        r = requests.get(url, timeout=3)
-        if r.status_code == 200:
-            data = r.json()
-            if data['results']:
-                res = data['results'][0]
-                return {
-                    "image": res.get('background_image'), 
-                    "meta": res.get('metacritic', 0)
-                }
-    except: pass
+    clean_name = game_name
+    
+    # Parantezleri sil (2024) gibi
+    clean_name = re.sub(r'\(.*?\)', '', clean_name)
+    
+    # İki noktadan sonrasını sil (Genelde alt başlıktır ve aramayı bozar)
+    # Ancak bazı oyunlarda (Call of Duty) iki noktadan sonrası önemlidir.
+    # Bu yüzden önce "Temiz" arama yapalım, bulamazsak "Kısa" arama yaparız.
+    
+    search_queries = [
+        clean_name, # Orijinal (Hafif temizlenmiş)
+        clean_name.split(':')[0], # İki noktadan öncesi (Örn: Stalker 2)
+        clean_name.replace('.', '').replace(':', ''), # Noktasız (Örn: Stalker 2)
+        " ".join(clean_name.split()[:2]) # İlk iki kelime (Acil durum)
+    ]
+    
+    # FC 26 Özel Durumu (Henüz çıkmadı, FC 25 resmi göster)
+    if "fc 26" in game_name.lower():
+        search_queries = ["EA Sports FC 25"]
+
+    for query in search_queries:
+        if len(query) < 2: continue
+        try:
+            url = f"https://api.rawg.io/api/games?key={RAWG_API_KEY}&search={query}&page_size=1"
+            r = requests.get(url, timeout=2)
+            if r.status_code == 200:
+                data = r.json()
+                if data['results']:
+                    res = data['results'][0]
+                    # Görsel varsa döndür
+                    if res.get('background_image'):
+                        return {
+                            "image": res.get('background_image'), 
+                            "meta": res.get('metacritic', 0)
+                        }
+        except: pass
+    
     return None
 
 def get_dollar_rate():
@@ -318,7 +342,7 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
             "price": "---", "discount": 0.0, "store": sub_name, "offers": []
         }
         
-        # 2. RAWG Görseli (Hızlı)
+        # 2. RAWG Görseli (AKILLI ARAMA)
         rawg = fetch_rawg_data(name)
         if rawg and rawg['image']:
             game_obj["thumb"] = rawg['image']
@@ -441,7 +465,6 @@ elif st.session_state.active_page == 'category':
 # SAYFA: DETAY
 elif st.session_state.active_page == 'detail':
     game = st.session_state.selected_game
-    # RAWG'dan detaylı resim çekmeyi dene (eğer placeholder ise)
     if game['thumb'] == PLACEHOLDER_IMG:
         rawg = fetch_rawg_data(game['title'])
         if rawg and rawg['image']: game['thumb'] = rawg['image']
@@ -462,7 +485,7 @@ elif st.session_state.active_page == 'detail':
         st.write("### 🏷️ Mağaza Fiyatları")
         offers = game.get('offers', [])
         if not offers: offers = [{"store": game.get('store', 'Bilinmiyor'), "price": game.get('price', '---'), "link": "#"}]
-        for off in offers:
+        for i, off in enumerate(offers):
             logo = STORE_LOGOS.get(off['store'])
             cl1, cl2, cl3 = st.columns([3, 2, 2])
             with cl1:
@@ -542,9 +565,9 @@ elif st.session_state.active_page == 'search':
                 for g_name in games:
                     if term.lower() in g_name.lower():
                         rawg = fetch_rawg_data(g_name)
-                        img = rawg['image'] if rawg else PLACEHOLDER_IMG
+                        thumb = rawg['image'] if rawg and rawg['image'] else PLACEHOLDER_IMG
                         grouped[g_name.title()] = {
-                            "title": g_name.title(), "thumb": img,
+                            "title": g_name.title(), "thumb": thumb,
                             "meta": 0, "user": 0, "sort_score": 0, "offers": [], "steamAppID": "0"
                         }
 
@@ -579,6 +602,8 @@ elif st.session_state.active_page == 'search':
                                 with cc3: st.link_button("Git", off['link'])
                                 st.divider()
                         else: st.caption("Henüz mağaza fiyatı yok.")
+                        
+                        # BENZERSİZ KEY
                         if st.button("🔍 Detaylı İncele", key=f"src_dt_{game['title']}_{i}"): go_detail(game)
                     st.markdown("---")
         else: st.warning("Sonuç bulunamadı.")
