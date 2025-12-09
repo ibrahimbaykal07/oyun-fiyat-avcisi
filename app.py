@@ -3,18 +3,20 @@ import requests
 import streamlit.components.v1 as components
 import math
 import re
+import xml.etree.ElementTree as ET
 
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
 PAGE_SIZE = 12
 PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
+RAWG_API_KEY = "3f8159cbaaac426bac87a770371c941f"
 
-# --- 2. CSS STİLİ ---
+# --- 2. CSS STİLİ (DİKEY GÖRSEL & DÜZEN) ---
 st.markdown("""
 <style>
     .block-container { padding-top: 1rem; }
     
-    /* DİKEY GÖRSEL */
+    /* GÖRSELLERİ DİK (POSTER) ZORLA */
     div[data-testid="stImage"] img { 
         border-radius: 8px; 
         width: 100%; 
@@ -22,7 +24,6 @@ st.markdown("""
         object-fit: cover; 
     }
     
-    /* OYUN BAŞLIĞI */
     .game-title { 
         font-size: 0.9em; 
         font-weight: bold; 
@@ -34,7 +35,6 @@ st.markdown("""
         text-align: center;
     }
     
-    /* FİYAT VE İNDİRİM */
     .price-container {
         display: flex;
         justify-content: center;
@@ -42,11 +42,13 @@ st.markdown("""
         gap: 8px;
         margin: 5px 0;
     }
+    
     .game-price { 
         font-size: 1.1em; 
         font-weight: bold; 
         color: #28a745; 
     }
+    
     .discount-tag {
         background-color: #dc3545;
         color: white;
@@ -56,7 +58,6 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* KATEGORİ BAŞLIĞI */
     .cat-header {
         font-size: 1.5em;
         font-weight: bold;
@@ -64,6 +65,17 @@ st.markdown("""
         margin-bottom: 15px;
         border-bottom: 2px solid #eee;
         padding-bottom: 5px;
+    }
+    
+    .kur-kutusu {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        color: #555;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
     }
     
     .stButton button { width: 100%; border-radius: 5px; }
@@ -136,13 +148,28 @@ def go_detail(game):
     scroll_to_top()
     st.rerun()
 
-# --- VERİ MOTORU (STEAM TR) ---
+# --- TCMB KUR ÇEKME ---
+@st.cache_data(ttl=3600)
+def get_dollar_rate():
+    """Merkez Bankası'ndan Dolar Kuru"""
+    try:
+        r = requests.get("https://www.tcmb.gov.tr/kurlar/today.xml", timeout=3)
+        if r.status_code == 200:
+            root = ET.fromstring(r.content)
+            for c in root.findall('Currency'):
+                if c.get('Kod') == 'USD':
+                    return float(c.find('ForexSelling').text)
+    except: pass
+    return 38.50 # Yedek (Eğer TCMB açılmazsa)
+
+# --- VERİ MOTORU ---
 @st.cache_data(ttl=3600)
 def fetch_steam_data(game_name):
+    """Steam'den Resim ve AppID çeker"""
     clean_name = re.sub(r'\(.*?\)', '', game_name).replace(':', '').replace('.', '').strip()
     
     if "fc 26" in clean_name.lower():
-        return {"price": "Henüz Çıkmadı", "thumb": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2195250/library_600x900.jpg", "appid": "0"}
+        return {"thumb": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2195250/library_600x900.jpg", "appid": "0"}
 
     try:
         url = f"https://store.steampowered.com/api/storesearch/?term={clean_name}&l=turkish&cc=tr"
@@ -153,17 +180,12 @@ def fetch_steam_data(game_name):
                 item = data['items'][0]
                 appid = item['id']
                 thumb = f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appid}/library_600x900.jpg"
-                
-                price_text = "Ücretsiz"
-                if 'price' in item:
-                    val = item['price']['final'] / 100
-                    price_text = f"${val:.2f}"
-                
-                return {"price": price_text, "thumb": thumb, "appid": appid, "title": item['name']}
+                return {"thumb": thumb, "appid": appid, "title": item['name']}
     except: pass
     return None
 
-def get_game_details(game_name, sub_name=""):
+def get_game_details(game_name, sub_name="", dolar_kuru=38.0):
+    """Manuel liste için detay ve FİYAT ÇEVİRİSİ"""
     data = {
         "title": game_name,
         "thumb": PLACEHOLDER_IMG,
@@ -172,22 +194,36 @@ def get_game_details(game_name, sub_name=""):
         "appid": "0",
         "discount": 0
     }
+    
+    # Resim ve ID için Steam
     steam_res = fetch_steam_data(game_name)
     if steam_res:
         data['title'] = steam_res['title']
         data['thumb'] = steam_res['thumb']
-        data['price'] = steam_res['price']
         data['appid'] = steam_res['appid']
+    
+    # Fiyat için CheapShark (Dolar -> TL)
+    try:
+        url = f"https://www.cheapshark.com/api/1.0/deals?title={game_name.split(':')[0]}&exact=0&limit=1"
+        r = requests.get(url, timeout=2).json()
+        if r:
+            deal = r[0]
+            usd_price = float(deal['salePrice'])
+            tl_price = int(usd_price * dolar_kuru)
+            data['price'] = f"{tl_price} TL"
+            data['discount'] = float(deal['savings'])
+    except: pass
+
     return data
 
 @st.cache_data(ttl=3600)
-def fetch_dynamic_deals(category, page=0, page_size=24):
-    """CheapShark'tan Vitrin Verisi + İndirim Oranı"""
+def fetch_dynamic_deals(category, dolar_kuru):
+    """Vitrin için CheapShark Verisi (TL ÇEVRİLMİŞ)"""
     sort_map = {"Popular": "Metacritic", "Sale": "Savings", "New": "Release"}
     sort_type = sort_map.get(category, "Metacritic")
     
     try:
-        url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1&sortBy={sort_type}&pageSize={page_size}&pageNumber={page}"
+        url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1&sortBy={sort_type}&pageSize=12&pageNumber=0"
         if category == "New": url += "&desc=1"
         if category == "Popular": url += "&metacritic=75"
         
@@ -199,22 +235,24 @@ def fetch_dynamic_deals(category, page=0, page_size=24):
             
             final_title = d['title']
             final_thumb = d.get('thumb', PLACEHOLDER_IMG)
-            final_price = f"${d['salePrice']}"
             final_appid = d.get('steamAppID', '0')
-            discount = float(d['savings']) # İNDİRİM ORANI BURADA
             
+            # Resim Düzeltme
             if s_data:
                 final_title = s_data['title']
                 final_thumb = s_data['thumb']
-                final_price = s_data['price']
                 final_appid = s_data['appid']
+            
+            # FİYAT ÇEVİRİSİ (USD -> TL)
+            price_usd = float(d['salePrice'])
+            price_tl = int(price_usd * dolar_kuru)
             
             results.append({
                 "title": final_title,
                 "thumb": final_thumb,
-                "price": final_price,
+                "price": f"{price_tl} TL",
                 "appid": final_appid,
-                "discount": discount,
+                "discount": float(d['savings']),
                 "store": "Steam Store"
             })
         return results
@@ -222,8 +260,9 @@ def fetch_dynamic_deals(category, page=0, page_size=24):
 
 # ================= ARAYÜZ =================
 scroll_to_top()
+kur = get_dollar_rate()
 
-# 1. ÜST NAVİGASYON (VİTRİN + ABONELİK)
+# 1. ÜST NAVİGASYON
 c1, c2 = st.columns([1, 4])
 with c1:
     if st.button("🏠 Ana Sayfa"): set_page('home')
@@ -234,7 +273,7 @@ with c2:
     if c_vitrin[1].button("🔥 İndirim"): go_category("Sale")
     if c_vitrin[2].button("✨ Yeni"): go_category("New")
     
-    st.write("") # Boşluk
+    st.write("") 
     
     # 4'lü Abonelik Butonları
     c_sub = st.columns(4)
@@ -243,6 +282,8 @@ with c2:
     if c_sub[2].button("EA Pro"): go_category("EA Play Pro", True)
     if c_sub[3].button("Ubisoft+"): go_category("Ubisoft+", True)
 
+# Kur Bilgisi
+st.markdown(f"<div class='kur-kutusu'>💲 Güncel Kur: 1 USD = {kur:.2f} TL</div>", unsafe_allow_html=True)
 st.divider()
 
 # 2. ARAMA
@@ -256,26 +297,24 @@ with st.form("search_form"):
 # --- SAYFA: ANA SAYFA ---
 if st.session_state.active_page == 'home':
     
-    # 1. POPÜLER (İlk 4)
+    # 1. POPÜLER
     st.markdown("<div class='cat-header'>🏆 En Popüler Başyapıtlar</div>", unsafe_allow_html=True)
-    pop_games = fetch_dynamic_deals("Popular", 0, 4)
+    pop_games = fetch_dynamic_deals("Popular", kur)
     if pop_games:
         cols = st.columns(4)
-        for i, g in enumerate(pop_games):
+        for i, g in enumerate(pop_games[:4]):
             with cols[i]:
                 st.image(g['thumb'])
                 st.markdown(f"<div class='game-title'>{g['title']}</div>", unsafe_allow_html=True)
-                # Fiyat + İndirim Etiketi
-                disc_html = f"<span class='discount-tag'>-%{int(g['discount'])}</span>" if g['discount'] > 0 else ""
-                st.markdown(f"<div class='price-container'><span class='game-price'>{g['price']}</span>{disc_html}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='price-container'><span class='game-price'>{g['price']}</span></div>", unsafe_allow_html=True)
                 if st.button("İncele", key=f"home_pop_{i}"): go_detail(g)
 
-    # 2. İNDİRİM (İlk 4)
+    # 2. İNDİRİM
     st.markdown("<div class='cat-header'>🔥 Süper İndirimler</div>", unsafe_allow_html=True)
-    sale_games = fetch_dynamic_deals("Sale", 0, 4)
+    sale_games = fetch_dynamic_deals("Sale", kur)
     if sale_games:
         cols = st.columns(4)
-        for i, g in enumerate(sale_games):
+        for i, g in enumerate(sale_games[:4]):
             with cols[i]:
                 st.image(g['thumb'])
                 st.markdown(f"<div class='game-title'>{g['title']}</div>", unsafe_allow_html=True)
@@ -283,19 +322,19 @@ if st.session_state.active_page == 'home':
                 st.markdown(f"<div class='price-container'><span class='game-price'>{g['price']}</span>{disc_html}</div>", unsafe_allow_html=True)
                 if st.button("İncele", key=f"home_sale_{i}"): go_detail(g)
 
-    # 3. YENİ (İlk 4)
+    # 3. YENİ
     st.markdown("<div class='cat-header'>✨ Yeni Çıkanlar</div>", unsafe_allow_html=True)
-    new_games = fetch_dynamic_deals("New", 0, 4)
+    new_games = fetch_dynamic_deals("New", kur)
     if new_games:
         cols = st.columns(4)
-        for i, g in enumerate(new_games):
+        for i, g in enumerate(new_games[:4]):
             with cols[i]:
                 st.image(g['thumb'])
                 st.markdown(f"<div class='game-title'>{g['title']}</div>", unsafe_allow_html=True)
                 st.markdown(f"<div class='price-container'><span class='game-price'>{g['price']}</span></div>", unsafe_allow_html=True)
                 if st.button("İncele", key=f"home_new_{i}"): go_detail(g)
 
-# --- SAYFA: KATEGORİ (LİSTELEME) ---
+# --- SAYFA: KATEGORİ ---
 elif st.session_state.active_page == 'category':
     cat_name = st.session_state.selected_cat
     is_sub = cat_name in SUBSCRIPTIONS
@@ -303,7 +342,6 @@ elif st.session_state.active_page == 'category':
     
     curr_page = st.session_state.page_number
     
-    # Veri Kaynağı Seçimi (Manuel vs Dinamik)
     if is_sub:
         full_list = SUBSCRIPTIONS.get(cat_name, [])
         total_games = len(full_list)
@@ -312,16 +350,16 @@ elif st.session_state.active_page == 'category':
         end_idx = start_idx + PAGE_SIZE
         
         current_batch_names = full_list[start_idx:end_idx]
-        current_batch = [get_game_details(name, cat_name) for name in current_batch_names]
+        current_batch = [get_game_details(name, cat_name, kur) for name in current_batch_names]
     else:
-        # Popüler/İndirim/Yeni Sayfası
-        current_batch = fetch_dynamic_deals(cat_name, curr_page, PAGE_SIZE)
-        total_pages = 10 # Dinamiklerde sabit sayfa limiti
+        # Dinamik Liste (Zaten 12 tane çekiyoruz)
+        current_batch = fetch_dynamic_deals(cat_name, kur)
+        total_pages = 1 
     
     if not current_batch:
         st.info("Bu kategoride oyun bulunamadı.")
     else:
-        # Grid Display
+        # 4'lü Grid
         for i in range(0, len(current_batch), 4):
             cols = st.columns(4)
             for j in range(4):
@@ -367,7 +405,7 @@ elif st.session_state.active_page == 'detail':
         st.info(f"Kaynak: **{g['store']}**")
     
     with c2:
-        st.title(g['title'])
+        st.markdown(f"<h1 style='margin-top:0;'>{g['title']}</h1>", unsafe_allow_html=True)
         st.markdown(desc, unsafe_allow_html=True)
         st.write("")
         st.subheader("Market Fiyatı")
@@ -384,9 +422,9 @@ elif st.session_state.active_page == 'search':
     term = st.session_state.search_term
     st.info(f"🔎 '{term}' aranıyor...")
     
-    res = get_game_details(term, "Arama Sonucu")
+    res = get_game_details(term, "Arama Sonucu", kur)
     
-    if res['appid'] != "0":
+    if res['appid'] != "0" or res['price'] != "---":
         with st.container():
             c1, c2 = st.columns([1, 3])
             with c1: st.image(res['thumb'])
@@ -395,4 +433,4 @@ elif st.session_state.active_page == 'search':
                 st.markdown(f"<div class='game-price' style='text-align:left;'>{res['price']}</div>", unsafe_allow_html=True)
                 if st.button("İncele", key="search_res_btn"): go_detail(res)
     else:
-        st.warning("Oyun bulunamadı veya Steam'de yok.")
+        st.warning("Oyun bulunamadı.")
