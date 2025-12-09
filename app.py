@@ -3,7 +3,7 @@ import requests
 import streamlit.components.v1 as components
 from datetime import datetime
 import re
-import math  # BU EKSİKTİ, EKLENDİ!
+import math
 
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
@@ -58,47 +58,36 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. DEVASA MANUEL LİSTE (PCGamingWiki 2025) ---
+# --- 4. MANUEL LİSTE ---
 SUBSCRIPTIONS = {
     "Game Pass": [
-        "Call of Duty: Black Ops 6", "Indiana Jones and the Great Circle", "S.T.A.L.K.E.R. 2: Heart of Chornobyl",
-        "Avowed", "Starfield", "Forza Motorsport", "Forza Horizon 5", "Halo Infinite", "Microsoft Flight Simulator 2024",
-        "Senua's Saga: Hellblade II", "Diablo IV", "Overwatch 2", "Minecraft", "Sea of Thieves", "Doom Eternal", "Gears 5",
-        "Atomic Heart", "Persona 3 Reload", "Like a Dragon: Infinite Wealth", "Wo Long: Fallen Dynasty", "Hollow Knight",
-        "Lies of P", "Palworld", "Cocoon", "Hi-Fi RUSH", "Grounded", "Elder Scrolls V: Skyrim", "Fallout 4", "Fallout 76",
-        "No Man's Sky", "Among Us", "Stardew Valley", "Vampire Survivors", "Valheim", "Dead by Daylight", "Age of Empires IV",
-        "Cities: Skylines II", "Football Manager 2024", "Ark: Survival Ascended", "Back 4 Blood", "Sniper Elite 5",
-        "A Plague Tale: Requiem", "Scorn", "High On Life", "Monster Hunter Rise", "Yakuza: Like a Dragon",
-        "Mass Effect Legendary Edition", "Control Ultimate Edition", "Deathloop", "Ghostwire: Tokyo", "Psychonauts 2",
-        "Remnant 2", "Payday 3", "Warhammer 40,000: Darktide", "The Outer Worlds", "Pillars of Eternity II",
-        "Wasteland 3", "Gears Tactics", "Halo: The Master Chief Collection", "Quantum Break", "Sunset Overdrive",
-        "State of Decay 2", "Bleeding Edge", "Battletoads", "Ori and the Will of the Wisps", "Ori and the Blind Forest",
-        "Hellblade: Senua's Sacrifice", "Prey", "Dishonored 2", "Wolfenstein II", "Yakuza 0", "Yakuza Kiwami",
-        "Persona 5 Royal", "Persona 4 Golden", "Tunic", "Dead Cells", "Slay the Spire", "Celeste", "Undertale"
+        "Call of Duty: Black Ops 6", "Modern Warfare III", "Diablo IV", "Starfield", "Forza Motorsport", "Forza Horizon 5", 
+        "Halo Infinite", "Microsoft Flight Simulator 2024", "Senua's Saga: Hellblade II", "S.T.A.L.K.E.R. 2", "Indiana Jones", 
+        "Avowed", "Persona 3 Reload", "Like a Dragon: Infinite Wealth", "Palworld", "Lies of P", "Cocoon", "Sea of Stars", 
+        "Hi-Fi RUSH", "Atomic Heart", "Wo Long", "A Plague Tale: Requiem", "Scorn", "Grounded", "High On Life", "Deathloop", 
+        "Ghostwire: Tokyo", "Minecraft", "Sea of Thieves", "Gears 5", "Doom Eternal", "Halo MCC", "Age of Empires IV", 
+        "Psychonauts 2", "Back 4 Blood", "Sniper Elite 5", "Monster Hunter Rise", "Assassin's Creed Valhalla", 
+        "Assassin's Creed Odyssey", "Far Cry 6", "Watch Dogs 2", "Rainbow Six Siege", "FIFA 23", "Battlefield 2042", 
+        "Mass Effect Legendary", "It Takes Two", "Need for Speed Unbound", "Jedi Fallen Order", "Titanfall 2", "The Sims 4", 
+        "Cities Skylines II", "Football Manager 2024", "Payday 3", "Darktide", "Remnant 2", "Hollow Knight", "Stardew Valley", 
+        "Vampire Survivors", "Valheim", "Among Us", "No Man's Sky", "Fallout 4", "Skyrim", "Control", "Dishonored 2", 
+        "Yakuza: Like a Dragon", "Persona 5 Royal", "Tunic", "Dead Cells", "Slay the Spire", "Celeste", "Undertale"
     ],
     "EA Play Pro": [
-        "EA SPORTS FC 26", "EA SPORTS FC 25", "Madden NFL 26", "Madden NFL 25", "F1 24", "Star Wars Jedi: Survivor",
-        "Immortals of Aveum", "Wild Hearts", "Dead Space Remake", "Tales of Kenzera: ZAU", "PGA Tour",
-        "Super Mega Baseball 4", "WRC 23", "Lost in Random", "Knockout City", "It Takes Two", "Mass Effect Legendary Edition",
-        "Need for Speed Unbound", "Battlefield 2042"
+        "EA SPORTS FC 25", "EA SPORTS FC 26", "Madden NFL 25", "F1 24", "Star Wars Jedi: Survivor", "Immortals of Aveum", 
+        "Wild Hearts", "Dead Space Remake", "Tales of Kenzera", "PGA Tour", "WRC 23", "Lost in Random", "Knockout City",
+        "It Takes Two", "Mass Effect Legendary", "Need for Speed Unbound", "Battlefield 2042"
     ],
     "EA Play": [
-        "EA SPORTS FC 24", "FIFA 23", "F1 23", "Madden NFL 24", "Battlefield 2042", "Battlefield V", "Battlefield 1",
-        "Star Wars Jedi: Fallen Order", "Star Wars Battlefront II", "Mass Effect Legendary Edition", "Titanfall 2",
-        "The Sims 4", "Need for Speed Unbound", "Need for Speed Heat", "It Takes Two", "A Way Out", "Unravel Two",
-        "Dragon Age: Inquisition", "Crysis Remastered", "Dead Space 3", "Plants vs. Zombies: Battle for Neighborville",
-        "Skate 3", "Burnout Paradise Remastered", "Mirror's Edge Catalyst", "SimCity", "Spore", "Peggle", "Bejeweled 3",
-        "Command & Conquer Remastered", "Alice: Madness Returns", "Medal of Honor: Warfighter"
+        "EA SPORTS FC 24", "FIFA 23", "F1 23", "Madden NFL 24", "Battlefield 2042", "Battlefield V", "Jedi Fallen Order", 
+        "Battlefront II", "Mass Effect Legendary", "Titanfall 2", "The Sims 4", "Need for Speed Heat", "It Takes Two", 
+        "A Way Out", "Unravel Two", "Dragon Age Inquisition", "Crysis Remastered", "Dead Space 3", "Skate 3", "Mirror's Edge"
     ],
     "Ubisoft+": [
-        "Assassin's Creed Shadows", "Star Wars Outlaws", "Avatar: Frontiers of Pandora", "Prince of Persia: The Lost Crown",
-        "Assassin's Creed Mirage", "The Crew Motorfest", "Skull and Bones", "Assassin's Creed Valhalla",
-        "Assassin's Creed Odyssey", "Assassin's Creed Origins", "Far Cry 6", "Far Cry 5", "Far Cry New Dawn",
-        "Tom Clancy's Rainbow Six Siege", "Tom Clancy's Rainbow Six Extraction", "Tom Clancy's The Division 2",
-        "Tom Clancy's Ghost Recon Breakpoint", "Tom Clancy's Ghost Recon Wildlands", "Watch Dogs: Legion", "Watch Dogs 2",
-        "Immortals Fenyx Rising", "Riders Republic", "Anno 1800", "For Honor", "The Settlers: New Allies",
-        "Scott Pilgrim vs. The World", "Rayman Legends", "South Park: The Fractured But Whole", "Steep", "Trackmania",
-        "XDefiant", "The Crew 2", "The Crew", "Trials Rising", "Child of Light", "Valiant Hearts", "Splinter Cell Blacklist"
+        "Assassin's Creed Shadows", "Star Wars Outlaws", "Avatar: Frontiers of Pandora", "Prince of Persia: The Lost Crown", 
+        "Assassin's Creed Mirage", "The Crew Motorfest", "Skull and Bones", "Assassin's Creed Valhalla", "Far Cry 6", 
+        "Rainbow Six Siege", "The Division 2", "Ghost Recon Breakpoint", "Watch Dogs Legion", "Immortals Fenyx Rising", 
+        "Riders Republic", "Anno 1800", "For Honor", "The Crew 2", "Trackmania", "South Park", "Rayman Legends", "Splinter Cell"
     ]
 }
 
@@ -134,6 +123,7 @@ def show_gallery_modal(media_list, start_idx=0):
 # --- AKILLI RAWG ARAMA ---
 @st.cache_data(ttl=3600)
 def fetch_rawg_data(game_name):
+    # İsim Temizle
     clean_name = re.sub(r'\(.*?\)', '', game_name)
     search_queries = [
         clean_name, 
@@ -152,8 +142,10 @@ def fetch_rawg_data(game_name):
                 data = r.json()
                 if data['results']:
                     res = data['results'][0]
-                    if res.get('background_image'):
-                        return {"image": res.get('background_image'), "meta": res.get('metacritic', 0)}
+                    # İsim benzerliği kontrolü (Alakasız sonuçları engelle)
+                    if query.lower() in res['name'].lower() or res['name'].lower() in query.lower():
+                        if res.get('background_image'):
+                            return {"image": res.get('background_image'), "meta": res.get('metacritic', 0)}
         except: pass
     return None
 
@@ -174,6 +166,8 @@ def get_game_image(deal):
     return PLACEHOLDER_IMG
 
 def get_meta_color(score):
+    # None kontrolü (Hata Çözümü)
+    if score is None: score = 0
     if score >= 75: return "meta-green"
     elif score >= 50: return "meta-yellow"
     else: return "meta-red"
@@ -315,6 +309,7 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
         return results
     except: return []
 
+# --- GÜÇLENDİRİLMİŞ LİSTE ÇEKİCİ ---
 def fetch_sub_games(sub_name, page=0, page_size=12):
     game_names = SUBSCRIPTIONS.get(sub_name, [])
     start = page * page_size
@@ -322,29 +317,26 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
     batch = game_names[start:end]
     results = []
     
-    for i, name in enumerate(batch):
-        # Varsayılan Obje (Garantili)
+    for name in batch:
         game_obj = {
             "title": name,
             "thumb": PLACEHOLDER_IMG,
-            "meta": 0, "user": 0,
-            "dealID": f"sub_{sub_name}_{start + i}", # BENZERSİZ ID (Sıra No ile)
-            "steamAppID": "0",
+            "meta": 0, "user": 0, "dealID": None, "steamAppID": "0",
             "price": "---", "discount": 0.0, "store": sub_name, "offers": []
         }
         
         # 1. RAWG API (Görsel ve Meta)
         rawg = fetch_rawg_data(name)
-        if rawg and rawg['image']:
-            game_obj["thumb"] = rawg['image']
-            game_obj["meta"] = rawg['meta']
+        if rawg:
+            if rawg['image']: game_obj["thumb"] = rawg['image']
+            if rawg['meta']: game_obj["meta"] = rawg['meta']
         
-        # 2. CheapShark (Fiyat - Yedek)
+        # 2. CheapShark (Fiyat - Timeout Artırıldı)
         if game_obj["thumb"] == PLACEHOLDER_IMG:
             try:
                 search_name = name.split(':')[0]
                 url = f"https://www.cheapshark.com/api/1.0/deals?title={search_name}&exact=0&limit=1"
-                r = requests.get(url, timeout=1.0)
+                r = requests.get(url, timeout=3.0) # SÜRE ARTIRILDI (Hata Çözümü)
                 if r.status_code == 200:
                     d = r.json()
                     if d:
@@ -411,8 +403,6 @@ if st.session_state.active_page == 'home':
                         c_p, c_d = st.columns([2, 1])
                         c_p.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
-                        
-                        # BENZERSİZ KEY (Sıra Numaralı)
                         if st.button("İncele", key=f"home_btn_{limit_key}_{i}_{j}"): go_detail(g)
             st.write("")
         if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"): increase_home_limit(limit_key)
@@ -442,7 +432,6 @@ elif st.session_state.active_page == 'category':
                         st.image(g['thumb'], use_container_width=True)
                         st.markdown(f"<div class='vitrin-title'>{g['title']}</div>", unsafe_allow_html=True)
                         st.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
-                        # BENZERSİZ KEY (Sayfa + Satır + Sütun)
                         if st.button("İncele", key=f"cat_btn_{curr_page}_{i}_{j}"): go_detail(g)
             st.write("")
         st.markdown("---")
@@ -472,8 +461,11 @@ elif st.session_state.active_page == 'detail':
             if st.button(f"Tüm {sub_n} Listesi", key="sub_link"): go_category(sub_n, None, None, True)
     with c2:
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
-        mc = get_meta_color(game.get('meta', 0))
-        st.markdown(f"""<div style="margin-bottom:15px;"><span class='score-badge {mc}'>Metacritic: {game.get('meta', 0)}</span><span class='score-badge user-blue'>Steam User: %{game.get('user', 0)}</span></div>""", unsafe_allow_html=True)
+        mc_score = game.get('meta')
+        if mc_score is None: mc_score = 0
+        mc_color = get_meta_color(mc_score)
+        
+        st.markdown(f"""<div style="margin-bottom:15px;"><span class='score-badge {mc_color}'>Metacritic: {mc_score}</span><span class='score-badge user-blue'>Steam User: %{game.get('user', 0)}</span></div>""", unsafe_allow_html=True)
         if desc: st.markdown(f"<div class='desc-box'>{desc}</div>", unsafe_allow_html=True)
         st.write("### 🏷️ Mağaza Fiyatları")
         offers = game.get('offers', [])
