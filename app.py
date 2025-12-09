@@ -3,16 +3,13 @@ import requests
 import xml.etree.ElementTree as ET
 import streamlit.components.v1 as components
 from datetime import datetime
-import math # Sayfa hesabı için gerekli
+import json
 
 # --- 1. AYARLAR ---
 st.set_page_config(page_title="Oyun Fiyatı (TR)", page_icon="🇹🇷", layout="centered")
 
-# Sayfa Başına Oyun Sayısı
-PAGE_SIZE = 12 
-
-# Yedek Resim
-PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
+# Kırık resimler için şık yedek görsel
+PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Bulunamadi"
 
 # Epic Store Kütüphanesi
 try:
@@ -21,62 +18,36 @@ try:
 except ImportError:
     EPIC_AVAILABLE = False
 
-# --- CSS STİLİ ---
+# --- CSS STİLİ (BAŞLIK RENGİ DÜZELTİLDİ) ---
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; }
-    
-    /* Genel */
     .kur-kutusu { background-color: #f8f9fa; padding: 8px 15px; border-radius: 8px; font-weight: bold; color: #495057; font-size: 0.9em; text-align: center; border: 1px solid #dee2e6; }
-    
-    /* Vitrin Resimleri */
     div[data-testid="stImage"] img { border-radius: 8px; aspect-ratio: 2/3; object-fit: cover; }
-    
     .vitrin-title { font-size: 0.9em; font-weight: bold; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
     .vitrin-price { font-size: 1.1em; font-weight: bold; color: #28a745; margin: 2px 0; }
     .vitrin-date { font-size: 0.75em; color: #666; margin-bottom: 5px; font-style: italic; }
     
-    /* DETAY BAŞLIK */
+    /* DETAY BAŞLIK - BEYAZ ZORLAMA */
     .detail-title { 
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-family: sans-serif;
         font-size: 2.5em; 
         font-weight: 800; 
         margin-bottom: 10px; 
-        color: #FFFFFF !important; 
+        color: #FFFFFF !important; /* KESİN BEYAZ */
+        text-shadow: 0px 0px 10px rgba(0,0,0,0.5); /* Okunurluk için gölge */
         line-height: 1.2;
     }
     
-    /* Açıklama Kutusu */
-    .desc-box { 
-        background-color: transparent; 
-        color: #FFFFFF !important; 
-        padding: 0; 
-        border: none; 
-        line-height: 1.6; 
-        font-size: 1.05em; 
-        margin-bottom: 20px; 
-    }
+    .desc-box { background-color: transparent; color: #FFFFFF !important; padding: 0; border: none; line-height: 1.6; font-size: 1.05em; margin-bottom: 20px; }
     
-    /* YENİ TIKLANABİLİR ROZET BUTONLARI */
-    .badge-container {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-family: sans-serif;
-        font-weight: 800;
-        font-size: 0.85em;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        margin-top: 5px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    }
-    
+    /* ROZETLER */
+    .badge-container { display: inline-block; padding: 6px 12px; border-radius: 6px; font-family: sans-serif; font-weight: 800; font-size: 0.85em; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .badge-gamepass { background-color: #107C10; color: white; border: 1px solid #0e6f0e; }
     .badge-eapro { background: linear-gradient(135deg, #ff8c00, #ff0080); color: white; border: 1px solid #e67e00; }
     .badge-ea { background-color: #FF4747; color: white; border: 1px solid #e03e3e; }
     .badge-ubi { background-color: #0099FF; color: white; border: 1px solid #0088e0; }
-
-    /* Diğerleri */
+    
     .req-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; font-size: 0.9em; height: 100%; }
     .req-title { font-weight: bold; margin-bottom: 10px; color: #333; font-size: 1.1em; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
     .price-big { font-size: 1.2em; font-weight: bold; color: #28a745; }
@@ -89,7 +60,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. LOGOLAR ---
+# --- LOGOLAR ---
 STORE_LOGOS = {
     "Steam": "https://cdn.simpleicons.org/steam/171a21",
     "Epic Games": "https://cdn.simpleicons.org/epicgames/333333",
@@ -98,44 +69,26 @@ STORE_LOGOS = {
     "GOG": "https://cdn.simpleicons.org/gogdotcom/893CE7"
 }
 
-# Rozetler için CSS Sınıf Eşleştirmesi
-SUB_CLASSES = {
-    "Game Pass": "badge-gamepass",
-    "EA Play Pro": "badge-eapro",
-    "EA Play": "badge-ea",
-    "Ubisoft+": "badge-ubi"
-}
+SUB_CLASSES = {"Game Pass": "badge-gamepass", "EA Play Pro": "badge-eapro", "EA Play": "badge-ea", "Ubisoft+": "badge-ubi"}
+SUB_BTN_LABELS = {"Game Pass": "🟩 Game Pass", "EA Play": "🟥 EA Play", "EA Play Pro": "🟧 EA Play Pro", "Ubisoft+": "🟦 Ubisoft+"}
 
-# --- 3. VERİTABANI ---
-import json # En üste ekle
-
-# ... (Diğer kodlar aynı) ...
-
-# --- 3. VERİTABANI (DOSYADAN OKUMA) ---
-# Eskiden burası elle yazılırdı, şimdi dosyadan okunuyor.
+# --- VERİTABANI YÜKLEME (ROBOTTAN GELEN) ---
 def load_subscriptions():
     try:
         with open('subscriptions.json', 'r', encoding='utf-8') as f:
             return json.load(f)
-    except FileNotFoundError:
-        # Dosya yoksa acil durum yedeği
+    except:
+        # Dosya yoksa veya bozuksa varsayılan liste (Yedek)
         return {
-            "Game Pass": [], "EA Play": [], "EA Play Pro": [], "Ubisoft+": []
+            "Game Pass": ["call of duty", "black ops 6", "diablo 4", "starfield", "forza", "halo", "minecraft"],
+            "EA Play Pro": ["fc 26", "fc 25", "f1 24", "madden nfl 25", "jedi survivor"],
+            "EA Play": ["fc 24", "fifa 23", "battlefield 2042", "it takes two", "mass effect"],
+            "Ubisoft+": ["assassin's creed mirage", "avatar", "far cry 6", "the crew", "rainbow six"]
         }
 
 SUBSCRIPTIONS = load_subscriptions()
 
-# ... (Geri kalan kodlar aynı) ...
-
-# Buton Etiketleri
-SUB_BTN_LABELS = {
-    "Game Pass": "🟩 Game Pass",
-    "EA Play": "🟥 EA Play",
-    "EA Play Pro": "🟧 EA Play Pro",
-    "Ubisoft+": "🟦 Ubisoft+"
-}
-
-# --- 4. SESSION STATE ---
+# --- STATE ---
 if 'active_page' not in st.session_state: st.session_state.active_page = 'home'
 if 'page_number' not in st.session_state: st.session_state.page_number = 0
 if 'selected_cat' not in st.session_state: st.session_state.selected_cat = None
@@ -144,8 +97,7 @@ if 'search_term' not in st.session_state: st.session_state.search_term = ""
 if 'gallery_idx' not in st.session_state: st.session_state.gallery_idx = 0
 if 'home_limits' not in st.session_state: st.session_state.home_limits = {"p1": 4, "p2": 4, "p3": 4}
 
-# --- 5. YARDIMCI FONKSİYONLAR ---
-
+# --- YARDIMCI FONKSİYONLAR ---
 def scroll_to_top():
     components.html("""<script>window.parent.document.querySelector('.main').scrollTop = 0;</script>""", height=0)
 
@@ -172,10 +124,15 @@ def get_dollar_rate():
     except: return 36.50
 
 def get_game_image(deal):
+    """Görsel Yoksa Placeholder Döndür"""
     sid = deal.get('steamAppID')
     if sid and sid != "0": return f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{sid}/library_600x900.jpg"
     thumb = deal.get('thumb')
-    if thumb: return thumb
+    # CheapShark bazen logo gönderir, logo oyun kapağı değildir. Bunu filtreleyelim.
+    if thumb and "capsule" in thumb: return thumb
+    if thumb and "header" in thumb: return thumb
+    
+    # Eğer geçerli bir resim yoksa Placeholder döndür
     return PLACEHOLDER_IMG
 
 def get_meta_color(score):
@@ -185,7 +142,11 @@ def get_meta_color(score):
 
 def check_subscription(game_name):
     s = game_name.lower().strip()
-    for g in SUBSCRIPTIONS["EA Play Pro"]:
+    # FC 26 Özel Kontrolü (Veritabanında varsa)
+    if "fc 26" in s or "fc26" in s:
+        return "EA Play Pro", SUB_CLASSES["EA Play Pro"]
+
+    for g in SUBSCRIPTIONS.get("EA Play Pro", []):
         if g in s: return "EA Play Pro", SUB_CLASSES["EA Play Pro"]
     for sub_name, games_list in SUBSCRIPTIONS.items():
         if sub_name == "EA Play Pro": continue
@@ -244,7 +205,7 @@ def get_steam_details_turkish(steam_id):
     return empty_return
 
 def autocorrect_name(term):
-    d = {"gta": "Grand Theft Auto", "gta 5": "Grand Theft Auto V", "cod": "Call of Duty", "fc 25": "EA SPORTS FC 25", "mc": "Minecraft", "cp": "Cyberpunk 2077"}
+    d = {"gta": "Grand Theft Auto", "gta 5": "Grand Theft Auto V", "cod": "Call of Duty", "fc 25": "EA SPORTS FC 25", "fc 26": "EA SPORTS FC 26", "mc": "Minecraft", "cp": "Cyberpunk 2077"}
     return d.get(term.lower().strip(), term)
 
 def clean_game_title(title):
@@ -266,7 +227,7 @@ def timestamp_to_date(ts):
     try: return datetime.fromtimestamp(ts).strftime('%d.%m.%Y')
     except: return ""
 
-# --- 7. NAVİGASYON ---
+# --- NAVIGASYON ---
 def go_home():
     st.session_state.active_page = 'home'
     st.session_state.page_number = 0
@@ -296,13 +257,11 @@ def increase_home_limit(key):
     st.session_state.home_limits[key] += 4
     st.rerun()
 
-# --- 8. VERİ MOTORU ---
+# --- VERİ ÇEKME ---
 def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
     url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy={sort_by}&onSale={on_sale}&pageSize={page_size}&pageNumber={page}"
-    if sort_by == "Release":
-        url = f"https://www.cheapshark.com/api/1.0/deals?storeID=1,25&sortBy=Release&onSale={on_sale}&pageSize={page_size}&pageNumber={page}&desc=1"
+    if sort_by == "Release": url += "&desc=1"
     if sort_by == "Metacritic": url += "&upperPrice=60&metacritic=70"
-    
     try:
         data = requests.get(url).json()
         results = []
@@ -315,21 +274,17 @@ def fetch_vitrin_deals(sort_by, on_sale=0, page=0, page_size=24):
                 "meta": int(d['metacriticScore']), "user": int(d['steamRatingPercent']),
                 "dealID": d['dealID'], "steamAppID": d.get('steamAppID'),
                 "price": price_tl, "discount": float(d['savings']),
-                "offers": [offer], "store": s_name,
-                "releaseDate": d.get('releaseDate', 0)
+                "offers": [offer], "store": s_name, "releaseDate": d.get('releaseDate', 0)
             })
         if sort_by == "Release": results.sort(key=lambda x: x['releaseDate'], reverse=True)
         return results
     except: return []
 
-# ABONELİK OYUNLARI ÇEKİCİ (Pagination Desteği)
 def fetch_sub_games(sub_name, page=0, page_size=12):
     game_names = SUBSCRIPTIONS.get(sub_name, [])
-    # Slice
     start = page * page_size
     end = start + page_size
     batch = game_names[start:end]
-    
     results = []
     for name in batch:
         try:
@@ -346,10 +301,18 @@ def fetch_sub_games(sub_name, page=0, page_size=12):
                     "store": "Steam" if d['storeID'] == "1" else "Epic",
                     "offers": [{"store": "Store", "price": price_tl, "link": f"https://www.cheapshark.com/redirect?dealID={d['dealID']}"}]
                 })
+            else:
+                # API'de yoksa bile manuel ekle (FC 26 gibi durumlar için)
+                results.append({
+                    "title": name.title(), "thumb": PLACEHOLDER_IMG,
+                    "meta": 0, "user": 0, "dealID": "0", "steamAppID": "0",
+                    "price": "---", "discount": 0, "store": "Bilinmiyor",
+                    "offers": []
+                })
         except: pass
     return results
 
-# ================= ARAYÜZ BAŞLIYOR =================
+# ================= ARAYÜZ =================
 scroll_to_top()
 dolar_kuru = get_dollar_rate()
 
@@ -361,14 +324,12 @@ with h2:
     if c1.button("🏆 Popüler"): go_category("En Popüler", "Metacritic", 0)
     if c2.button("🔥 İndirim"): go_category("Süper İndirimler", "Savings", 1)
     if c3.button("✨ Yeni"): go_category("Yeni Çıkanlar", "Release", 0)
-    
     st.write("")
     s1, s2, s3, s4 = st.columns(4)
-    if s1.button("Game Pass", help="Xbox Game Pass Oyunları"): go_category("Game Pass", None, None, True)
-    if s2.button("EA Play", help="Standart EA Play"): go_category("EA Play", None, None, True)
-    if s3.button("EA Play Pro", help="Premium EA Play"): go_category("EA Play Pro", None, None, True)
-    if s4.button("Ubisoft+", help="Ubisoft Plus"): go_category("Ubisoft+", None, None, True)
-
+    if s1.button("Game Pass", help="Xbox Game Pass"): go_category("Game Pass", None, None, True)
+    if s2.button("EA Play", help="Standart EA"): go_category("EA Play", None, None, True)
+    if s3.button("EA Play Pro", help="Premium EA"): go_category("EA Play Pro", None, None, True)
+    if s4.button("Ubisoft+", help="Ubisoft"): go_category("Ubisoft+", None, None, True)
 with h3:
     st.markdown(f"<div class='kur-kutusu'>💲 {dolar_kuru:.2f} TL</div>", unsafe_allow_html=True)
 
@@ -376,7 +337,7 @@ st.divider()
 
 with st.form(key='global_search'):
     ci, cb = st.columns([4, 1])
-    with ci: s_val = st.text_input("Oyun Ara", placeholder="Oyun ismi yazın...", label_visibility="collapsed")
+    with ci: s_val = st.text_input("Oyun Ara", placeholder="FC 26, GTA V...", label_visibility="collapsed")
     with cb: s_btn = st.form_submit_button("🔎 Bul")
 
 if s_btn and s_val:
@@ -384,7 +345,7 @@ if s_btn and s_val:
     st.session_state.active_page = 'search'
     st.rerun()
 
-# ================= SAYFA 1: ANA SAYFA =================
+# SAYFA: ANA SAYFA
 if st.session_state.active_page == 'home':
     cats_config = [("🏆 En Popüler Başyapıtlar", "Metacritic", 0, "p1"), ("🔥 Şuan İndirimde", "Savings", 1, "p2"), ("✨ Yeni Çıkanlar", "Release", 0, "p3")]
     for title, sort_key, sale_flag, limit_key in cats_config:
@@ -406,28 +367,23 @@ if st.session_state.active_page == 'home':
                         if g['discount'] > 0: c_d.markdown(f"<span style='background:#d00;color:white;font-size:0.8em;padding:2px;border-radius:3px;'>-%{g['discount']}</span>", unsafe_allow_html=True)
                         if st.button("İncele", key=f"btn_{g['dealID']}"): go_detail(g)
             st.write("")
-        if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"):
-            increase_home_limit(limit_key)
+        if st.button(f"➕ {title} - Daha Fazla Göster", key=f"more_{limit_key}"): increase_home_limit(limit_key)
         st.markdown("---")
 
-# ================= SAYFA 2: KATEGORİ (NUMARALI SAYFALAMA) =================
+# SAYFA: KATEGORİ
 elif st.session_state.active_page == 'category':
     cat = st.session_state.selected_cat
     curr_page = st.session_state.page_number
     st.subheader(f"{cat['name']}")
-    
-    # Veri Çekme
     if cat.get('is_sub'):
-        # Abonelik: Listeden Çek
-        games = fetch_sub_games(cat['name'], page=curr_page, page_size=PAGE_SIZE)
-        # Toplam Sayfa Hesapla
+        games = fetch_sub_games(cat['name'], page=curr_page, page_size=12)
         total_items = len(SUBSCRIPTIONS.get(cat['name'], []))
-        total_pages = math.ceil(total_items / PAGE_SIZE)
+        import math
+        total_pages = math.ceil(total_items / 12)
     else:
-        # API: Normal Çek
         games = fetch_vitrin_deals(cat['sort'], on_sale=cat['sale'], page=curr_page, page_size=24)
-        total_pages = 10 # API sonunu bilmediğimiz için tahmini (Dinamik)
-
+        total_pages = 10
+    
     if games:
         for i in range(0, len(games), 4):
             cols = st.columns(4)
@@ -440,48 +396,32 @@ elif st.session_state.active_page == 'category':
                         st.markdown(f"<div class='vitrin-price'>{g['price']} TL</div>", unsafe_allow_html=True)
                         if st.button("İncele", key=f"cat_btn_{g['dealID']}"): go_detail(g)
             st.write("")
-        
-        # --- NUMARALI SAYFALAMA (YENİ) ---
         st.markdown("---")
-        
-        # Kaç buton gösterilecek?
-        display_range = 5
-        start_p = max(0, curr_page - 2)
-        end_p = min(total_pages, start_p + display_range)
-        
-        pg_cols = st.columns(display_range + 2) # +2 (Önceki/Sonraki için opsiyonel yer)
-        
-        for i in range(start_p, end_p):
-            col_idx = i - start_p
-            with pg_cols[col_idx]:
-                b_type = "primary" if i == curr_page else "secondary"
-                if st.button(f"{i + 1}", key=f"pg_{i}", type=b_type):
-                    set_page_num(i)
-                    
+        c1, c2, c3 = st.columns([1, 4, 1])
+        if c1.button("⬅️ Geri"): set_page_num(max(0, curr_page - 1))
+        if c3.button("İleri ➡️"): set_page_num(curr_page + 1)
     else: st.info("Bu sayfada oyun yok.")
 
-# ================= SAYFA 3: DETAY (TIKLANABİLİR BUTON) =================
+# SAYFA: DETAY
 elif st.session_state.active_page == 'detail':
     game = st.session_state.selected_game
     desc, media_list, req_min, req_rec = get_steam_details_turkish(game.get('steamAppID'))
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
         st.image(game['thumb'], use_container_width=True)
-        # TIKLANABİLİR ABONELİK BUTONU
         sub_n, sub_cls = check_subscription(game['title'])
         if sub_n:
             label = SUB_BTN_LABELS.get(sub_n, sub_n + " DAHİL")
-            if st.button(label, use_container_width=True):
-                go_category(sub_n, None, None, True)
-                
+            if st.button(label, use_container_width=True): go_category(sub_n, None, None, True)
     with c2:
         st.markdown(f"<h1 class='detail-title'>{game['title']}</h1>", unsafe_allow_html=True)
         mc = get_meta_color(game['meta'])
         st.markdown(f"""<div style="margin-bottom:15px;"><span class='score-badge {mc}'>Metacritic: {game['meta']}</span><span class='score-badge user-blue'>Steam User: %{game['user']}</span></div>""", unsafe_allow_html=True)
         if desc: st.markdown(f"<div class='desc-box'>{desc}</div>", unsafe_allow_html=True)
+        else: st.info("Bu oyunun açıklaması henüz eklenmedi.")
         st.write("### 🏷️ Mağaza Fiyatları")
         offers = game.get('offers', [])
-        if not offers: offers = [{"store": game['store'], "price": game['price'], "link": f"https://www.cheapshark.com/redirect?dealID={game['dealID']}"}]
+        if not offers: offers = [{"store": game.get('store', 'Bilinmiyor'), "price": game.get('price', '---'), "link": "#"}]
         for off in offers:
             logo = STORE_LOGOS.get(off['store'])
             cl1, cl2, cl3 = st.columns([3, 2, 2])
@@ -493,9 +433,8 @@ elif st.session_state.active_page == 'detail':
             st.divider()
     st.markdown("---")
     if media_list:
-        st.subheader("🎬 Medya Galerisi (Fragman & Resim)")
-        display_limit = 6
-        for i in range(0, min(len(media_list), display_limit), 3):
+        st.subheader("🎬 Medya Galerisi")
+        for i in range(0, min(len(media_list), 6), 3):
             cols = st.columns(3)
             for j in range(3):
                 idx = i + j
@@ -504,23 +443,22 @@ elif st.session_state.active_page == 'detail':
                     with cols[j]:
                         st.image(item['thumb'], use_container_width=True)
                         icon = "▶️ Oynat" if item['type'] == 'video' else "🔍 Büyüt"
-                        if st.button(f"{icon}", key=f"gal_{idx}", use_container_width=True):
-                            show_gallery_modal(media_list, start_idx=idx)
+                        if st.button(f"{icon}", key=f"gal_{idx}", use_container_width=True): show_gallery_modal(media_list, start_idx=idx)
             st.write("")
-    st.write("")
-    if req_min != "Bilgi yok." or req_rec != "Bilgi yok.":
+    if req_min != "Bilgi yok.":
+        st.write("")
         st.subheader("💻 Sistem Gereksinimleri")
         rq1, rq2 = st.columns(2)
         with rq1:
             st.markdown("<div class='req-box'><div class='req-title'>Minimum</div>", unsafe_allow_html=True)
-            if req_min: st.markdown(req_min, unsafe_allow_html=True)
+            st.markdown(req_min, unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
         with rq2:
             st.markdown("<div class='req-box'><div class='req-title'>Önerilen</div>", unsafe_allow_html=True)
             if req_rec: st.markdown(req_rec, unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-# ================= SAYFA 4: ARAMA =================
+# SAYFA: ARAMA
 elif st.session_state.active_page == 'search':
     term = st.session_state.search_term
     st.info(f"🔎 '{term}' aranıyor...")
@@ -549,39 +487,41 @@ elif st.session_state.active_page == 'search':
                     grouped[title]['thumb'] = get_game_image(deal)
                 s_name = s_map[deal['storeID']]
                 p_usd = float(deal['salePrice'])
-                is_local_tl = False
                 final_link = f"https://www.cheapshark.com/redirect?dealID={deal['dealID']}"
                 if s_name == "Steam" and deal.get('steamAppID'):
                     price_val, curr = get_steam_turkey_price(deal.get('steamAppID'))
-                    if price_val:
-                        p_usd = price_val
-                        final_link = f"https://store.steampowered.com/app/{deal['steamAppID']}/"
-                        if curr == "TRY": is_local_tl = True
+                    if price_val: p_usd = price_val
                 elif s_name == "Epic Games":
                     ep_p, _, ep_l = get_epic_price_local(deal['title'])
-                    if ep_p: 
-                        p_usd = ep_p
-                        is_local_tl = True
-                        if ep_l: final_link = ep_l
-                price_final = int(p_usd) if is_local_tl else int(p_usd * dolar_kuru)
-                grouped[title]["offers"].append({
-                    "store": s_name, "price": price_final, "link": final_link
-                })
+                    if ep_p: p_usd = ep_p
+                price_final = int(p_usd) if s_name in ["Steam", "Epic Games"] else int(p_usd * dolar_kuru)
+                grouped[title]["offers"].append({"store": s_name, "price": price_final, "link": final_link})
+        
+        # --- FC 26 GİBİ MANUEL OYUNLAR İÇİN EKLEME ---
+        # Eğer arama sonucunda oyun çıkmadıysa ama bizim abonelik listemizde varsa
+        if not grouped:
+            for sub, games in SUBSCRIPTIONS.items():
+                for g_name in games:
+                    if term.lower() in g_name.lower():
+                        # Manuel oyun kartı oluştur
+                        grouped[g_name.title()] = {
+                            "title": g_name.title(), "thumb": PLACEHOLDER_IMG,
+                            "meta": 0, "user": 0, "sort_score": 0, "offers": [], "steamAppID": "0"
+                        }
+
         if grouped:
             st.success(f"✅ {len(grouped)} oyun bulundu.")
-            g_list = sorted(grouped.values(), key=lambda x: (x['sort_score'], min(o['price'] for o in x['offers'])))
+            g_list = sorted(grouped.values(), key=lambda x: (x['sort_score'], min([o['price'] for o in x['offers']] if x['offers'] else [99999])))
             for game in g_list:
                 with st.container():
                     c1, c2, c3 = st.columns([1.5, 2.5, 3])
                     with c1: st.image(game['thumb'], use_container_width=True)
                     with c2: 
                         st.subheader(game['title'])
-                        # --- TIKLANABİLİR BUTON ---
                         sub_n, sub_cls = check_subscription(game['title'])
                         if sub_n:
                             label = SUB_BTN_LABELS.get(sub_n, sub_n + " DAHİL")
-                            if st.button(label, key=f"src_sub_{game['title']}", use_container_width=True):
-                                go_category(sub_n, None, None, True)
+                            if st.button(label, key=f"src_sub_{game['title']}", use_container_width=True): go_category(sub_n, None, None, True)
                         st.write("")
                         if game['meta']>0: 
                             mc=get_meta_color(game['meta'])
@@ -591,17 +531,19 @@ elif st.session_state.active_page == 'search':
                     with c3:
                         st.write("**Fiyatlar**")
                         s_offers = sorted(game['offers'], key=lambda x: x['price'])
-                        for off in s_offers:
-                            l_url = STORE_LOGOS.get(off['store'])
-                            cc1, cc2, cc3 = st.columns([3, 2, 2])
-                            with cc1: 
-                                if l_url: st.image(l_url, width=20)
-                                else: st.write(off['store'])
-                            with cc2: st.markdown(f"<span class='price-big'>{off['price']} TL</span>", unsafe_allow_html=True)
-                            with cc3: st.link_button("Git", off['link'])
-                            st.divider()
+                        if s_offers:
+                            for off in s_offers:
+                                l_url = STORE_LOGOS.get(off['store'])
+                                cc1, cc2, cc3 = st.columns([3, 2, 2])
+                                with cc1: 
+                                    if l_url: st.image(l_url, width=20)
+                                    else: st.write(off['store'])
+                                with cc2: st.markdown(f"<span class='price-big'>{off['price']} TL</span>", unsafe_allow_html=True)
+                                with cc3: st.link_button("Git", off['link'])
+                                st.divider()
+                        else: st.caption("Henüz mağaza fiyatı yok.")
+                        
                         if st.button("🔍 Detaylı İncele", key=f"src_dt_{game['title']}"): go_detail(game)
                     st.markdown("---")
         else: st.warning("Sonuç bulunamadı.")
     except Exception as e: st.error(str(e))
-
