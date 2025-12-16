@@ -11,7 +11,7 @@ PAGE_SIZE = 12
 PLACEHOLDER_IMG = "https://placehold.co/600x900/1a1a1a/FFFFFF/png?text=Gorsel+Yok"
 RAWG_API_KEY = "3f8159cbaaac426bac87a770371c941f"
 
-# --- 2. CSS STİLİ (DİKEY GÖRSEL & DÜZEN) ---
+# --- 2. CSS STİLİ ---
 st.markdown("""
 <style>
     .block-container { padding-top: 1rem; }
@@ -67,15 +67,13 @@ st.markdown("""
         padding-bottom: 5px;
     }
     
-    .kur-kutusu {
-        background-color: #f8f9fa;
-        padding: 10px;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: bold;
-        color: #555;
-        margin-bottom: 10px;
-        border: 1px solid #ddd;
+    /* MİNİMAL KUR GÖSTERGESİ */
+    .small-rate {
+        font-size: 0.8em;
+        color: #666;
+        text-align: right;
+        margin-bottom: 5px;
+        font-style: italic;
     }
     
     .stButton button { width: 100%; border-radius: 5px; }
@@ -148,10 +146,21 @@ def go_detail(game):
     scroll_to_top()
     st.rerun()
 
+def check_subscription(game_name):
+    """Oyunun herhangi bir abonelikte olup olmadığını kontrol eder"""
+    s = game_name.lower().strip()
+    # FC 26 Özel Kontrol
+    if "fc 26" in s: return "EA Play Pro"
+    
+    for sub_name, games_list in SUBSCRIPTIONS.items():
+        for g in games_list:
+            if g.lower() in s or s in g.lower():
+                return sub_name
+    return None
+
 # --- TCMB KUR ÇEKME ---
 @st.cache_data(ttl=3600)
 def get_dollar_rate():
-    """Merkez Bankası'ndan Dolar Kuru"""
     try:
         r = requests.get("https://www.tcmb.gov.tr/kurlar/today.xml", timeout=3)
         if r.status_code == 200:
@@ -160,7 +169,7 @@ def get_dollar_rate():
                 if c.get('Kod') == 'USD':
                     return float(c.find('ForexSelling').text)
     except: pass
-    return 38.50 # Yedek (Eğer TCMB açılmazsa)
+    return 38.50 # Yedek
 
 # --- VERİ MOTORU ---
 @st.cache_data(ttl=3600)
@@ -195,14 +204,12 @@ def get_game_details(game_name, sub_name="", dolar_kuru=38.0):
         "discount": 0
     }
     
-    # Resim ve ID için Steam
     steam_res = fetch_steam_data(game_name)
     if steam_res:
         data['title'] = steam_res['title']
         data['thumb'] = steam_res['thumb']
         data['appid'] = steam_res['appid']
     
-    # Fiyat için CheapShark (Dolar -> TL)
     try:
         url = f"https://www.cheapshark.com/api/1.0/deals?title={game_name.split(':')[0]}&exact=0&limit=1"
         r = requests.get(url, timeout=2).json()
@@ -218,7 +225,7 @@ def get_game_details(game_name, sub_name="", dolar_kuru=38.0):
 
 @st.cache_data(ttl=3600)
 def fetch_dynamic_deals(category, dolar_kuru):
-    """Vitrin için CheapShark Verisi (TL ÇEVRİLMİŞ)"""
+    """Vitrin için Veri"""
     sort_map = {"Popular": "Metacritic", "Sale": "Savings", "New": "Release"}
     sort_type = sort_map.get(category, "Metacritic")
     
@@ -237,13 +244,11 @@ def fetch_dynamic_deals(category, dolar_kuru):
             final_thumb = d.get('thumb', PLACEHOLDER_IMG)
             final_appid = d.get('steamAppID', '0')
             
-            # Resim Düzeltme
             if s_data:
                 final_title = s_data['title']
                 final_thumb = s_data['thumb']
                 final_appid = s_data['appid']
             
-            # FİYAT ÇEVİRİSİ (USD -> TL)
             price_usd = float(d['salePrice'])
             price_tl = int(price_usd * dolar_kuru)
             
@@ -253,7 +258,7 @@ def fetch_dynamic_deals(category, dolar_kuru):
                 "price": f"{price_tl} TL",
                 "appid": final_appid,
                 "discount": float(d['savings']),
-                "store": "Steam Store"
+                "store": "Mağaza"
             })
         return results
     except: return []
@@ -282,8 +287,8 @@ with c2:
     if c_sub[2].button("EA Pro"): go_category("EA Play Pro", True)
     if c_sub[3].button("Ubisoft+"): go_category("Ubisoft+", True)
 
-# Kur Bilgisi
-st.markdown(f"<div class='kur-kutusu'>💲 Güncel Kur: 1 USD = {kur:.2f} TL</div>", unsafe_allow_html=True)
+# Minimal Kur Bilgisi (Sağ üstte küçük)
+st.markdown(f"<div class='small-rate' style='text-align:right; font-size:0.8em; color:#888; margin-bottom:-10px;'>Dolar Kuru: {kur:.2f} TL</div>", unsafe_allow_html=True)
 st.divider()
 
 # 2. ARAMA
@@ -352,14 +357,12 @@ elif st.session_state.active_page == 'category':
         current_batch_names = full_list[start_idx:end_idx]
         current_batch = [get_game_details(name, cat_name, kur) for name in current_batch_names]
     else:
-        # Dinamik Liste (Zaten 12 tane çekiyoruz)
         current_batch = fetch_dynamic_deals(cat_name, kur)
         total_pages = 1 
     
     if not current_batch:
         st.info("Bu kategoride oyun bulunamadı.")
     else:
-        # 4'lü Grid
         for i in range(0, len(current_batch), 4):
             cols = st.columns(4)
             for j in range(4):
@@ -376,7 +379,6 @@ elif st.session_state.active_page == 'category':
                         if st.button("İncele", key=f"cat_btn_{curr_page}_{i}_{j}"): go_detail(g)
             st.write("")
 
-        # Sayfalama
         if total_pages > 1:
             st.markdown("---")
             p_cols = st.columns(min(total_pages, 10))
@@ -390,6 +392,10 @@ elif st.session_state.active_page == 'category':
 elif st.session_state.active_page == 'detail':
     g = st.session_state.selected_game
     
+    # 1. Abonelik Kontrolü
+    sub_found = check_subscription(g['title'])
+    
+    # 2. Açıklama
     desc = "Açıklama bulunamadı."
     if g['appid'] != "0":
         try:
@@ -402,14 +408,18 @@ elif st.session_state.active_page == 'detail':
     c1, c2 = st.columns([1.5, 2.5])
     with c1:
         st.image(g['thumb'])
-        st.info(f"Kaynak: **{g['store']}**")
+        if sub_found:
+            st.success(f"✅ Bu oyun **{sub_found}** kütüphanesinde mevcut!")
+        else:
+            st.info("Bu oyun herhangi bir abonelik servisinde bulunamadı.")
     
     with c2:
         st.markdown(f"<h1 style='margin-top:0;'>{g['title']}</h1>", unsafe_allow_html=True)
         st.markdown(desc, unsafe_allow_html=True)
         st.write("")
-        st.subheader("Market Fiyatı")
         
+        # Fiyat Kısmı (Mağaza)
+        st.subheader("Satın Alma Fiyatı")
         disc_val = g.get('discount', 0)
         disc_str = f" (-%{int(disc_val)})" if disc_val > 0 else ""
         
