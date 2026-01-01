@@ -1,182 +1,196 @@
 import streamlit as st
-import pandas as pd
 import requests
+from epicstore_api import EpicGamesStoreAPI
 
 # --- SAYFA AYARLARI ---
-st.set_page_config(
-    page_title="Oyun Fiyat Avcısı",
-    page_icon="🔥",
-    layout="wide"
-)
+st.set_page_config(page_title="Pro Oyun Fiyat Avcısı", page_icon="🚀", layout="wide")
 
-# --- CSS İLE GÖRÜNÜMÜ İYİLEŞTİRME ---
+# CSS İyileştirmesi
 st.markdown("""
 <style>
-    .stButton button {
-        width: 100%;
-        border-radius: 10px;
-        font-weight: bold;
-    }
-    .price-tag {
-        font-size: 24px;
-        font-weight: bold;
-        color: #2e7d32;
-    }
-    .store-name {
-        font-size: 18px;
-        font-weight: 600;
-    }
+    .big-font { font-size:20px !important; font-weight: bold; }
+    .price-box { background-color: #f0f2f6; padding: 10px; border-radius: 10px; border: 1px solid #ddd; }
+    .epic-price { color: #0078f2; font-size: 24px; font-weight: bold; }
+    .steam-price { color: #1b2838; font-size: 24px; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- BAŞLIK ---
-st.title("🔥 Dev Oyun Fiyat Karşılaştırma")
-st.markdown("Oyunun adını yazın, **Steam, Epic, Xbox** ve diğer mağazalardaki fiyatları dev resimlerle görün.")
+st.title("🚀 Gerçek Zamanlı Steam & Epic Fiyat Karşılaştırma")
+st.write("Bu modül, **Epic Games Store** ve **Steam** sunucularına doğrudan bağlanır.")
 st.divider()
 
 # --- FONKSİYONLAR ---
 
 @st.cache_data(ttl=3600)
 def get_usd_rate():
-    """Güncel Dolar kurunu çeker."""
+    """Dolar kurunu al"""
     try:
-        url = "https://open.er-api.com/v6/latest/USD"
-        response = requests.get(url, timeout=5)
-        data = response.json()
-        return data["rates"]["TRY"]
+        r = requests.get("https://open.er-api.com/v6/latest/USD", timeout=5).json()
+        return r["rates"]["TRY"]
     except:
-        return 35.0 
+        return 35.0
 
-@st.cache_data(ttl=86400)
-def get_stores():
-    """Mağaza bilgilerini çeker."""
+def search_epic_price(game_name):
+    """Epic Games Store'dan doğrudan TL fiyatı çeker"""
     try:
-        url = "https://www.cheapshark.com/api/1.0/stores"
-        response = requests.get(url)
-        stores = response.json()
-        return {store['storeID']: store['storeName'] for store in stores}
-    except:
-        return {}
+        api = EpicGamesStoreAPI()
+        # Oyunu arat
+        games = api.fetch_store_games(
+            keywords=game_name,
+            sort_dir="DESC",
+            sort_by="relevancy",
+            count=1
+        )
+        
+        elements = games.get('data', {}).get('Catalog', {}).get('searchStore', {}).get('elements', [])
+        
+        if elements:
+            game_data = elements[0]
+            title = game_data.get('title')
+            
+            # Fiyat verisine ulaşmak biraz karmaşık (JSON içinde gömülü)
+            price_info = game_data.get('price', {}).get('totalPrice', {})
+            original_price = price_info.get('originalPrice', 0) / 100 # Kuruş hesabı
+            discount_price = price_info.get('discountPrice', 0) / 100
+            currency = price_info.get('currencyCode')
+            
+            # Resim bulma
+            image = None
+            for img in game_data.get('keyImages', []):
+                if img.get('type') == 'OfferImageWide':
+                    image = img.get('url')
+                    break
+            if not image and game_data.get('keyImages'):
+                image = game_data['keyImages'][0]['url']
 
-def search_game_deals(game_name, usd_rate, store_map):
-    """Oyun ismine göre arama yapar."""
-    # CheapShark üzerinden arama
-    search_url = f"https://www.cheapshark.com/api/1.0/games?title={game_name}"
+            # Ürün linki (Slug üzerinden)
+            product_slug = game_data.get('productSlug')
+            # Bazen slug boş olabilir, catalogNs kullanırız
+            if not product_slug:
+                product_slug = game_data.get('urlSlug')
+                
+            link = f"https://store.epicgames.com/tr/p/{product_slug}" if product_slug else "https://store.epicgames.com/tr/"
+
+            return {
+                "source": "Epic Games",
+                "title": title,
+                "price": discount_price,
+                "original_price": original_price,
+                "currency": currency, # Genelde TRY gelir
+                "image": image,
+                "link": link
+            }
+        return None
+    except Exception as e:
+        print(f"Epic Hatası: {e}")
+        return None
+
+def search_steam_price(game_name, usd_rate):
+    """CheapShark üzerinden Steam fiyatı ve görseli"""
     try:
-        response = requests.get(search_url)
-        games = response.json()
+        url = f"https://www.cheapshark.com/api/1.0/games?title={game_name}"
+        resp = requests.get(url).json()
         
-        if not games:
-            return None
-
-        results = []
-        
-        # İlk 10 sonucu getir
-        for game in games[:10]:
-            game_id = game['gameID']
-            title = game['external']
-            thumb = game['thumb'] # Küçük resim yerine detaydan büyüğünü almaya çalışacağız
+        if resp:
+            # En alakalı sonucu al
+            game_id = resp[0]['gameID']
+            thumb = resp[0]['thumb']
             
             # Detayları çek
-            details_url = f"https://www.cheapshark.com/api/1.0/games?id={game_id}"
-            details_resp = requests.get(details_url)
-            details = details_resp.json()
+            details = requests.get(f"https://www.cheapshark.com/api/1.0/games?id={game_id}").json()
+            steam_deal = None
             
-            # En iyi görüntü kalitesi için görseli değiştirmeyi deneyelim
-            # CheapShark bazen küçük resim verir, Steam ID varsa Steam görselini alırız
-            image_url = thumb
-            if 'info' in details and 'steamAppID' in details['info']:
-                steam_id = details['info']['steamAppID']
-                if steam_id:
-                    image_url = f"https://cdn.cloudflare.steamstatic.com/steam/apps/{steam_id}/header.jpg"
-
-            deals = details.get('deals', [])
-            store_prices = []
+            # Sadece Steam (Store ID 1) olanı bul
+            for deal in details.get('deals', []):
+                if deal['storeID'] == "1":
+                    steam_deal = deal
+                    break
             
-            # Hedef Mağazalar
-            target_stores = ['Steam', 'Epic Games Store', 'Microsoft Store', 'GOG', 'Origin', 'Uplay']
-            
-            for deal in deals:
-                store_id = deal['storeID']
-                store_name = store_map.get(store_id, "Diğer")
-                
-                if store_name in target_stores:
-                    price_usd = float(deal['price'])
-                    price_tl = price_usd * usd_rate
-                    
-                    store_prices.append({
-                        "store": store_name,
-                        "price_tl": price_tl,
-                        "price_usd": price_usd,
-                        # Epic linklerini manuel düzeltme (API bazen bozuk link verir)
-                        "link": f"https://www.cheapshark.com/redirect?dealID={deal['dealID']}"
-                    })
-            
-            # Eğer hiç fiyat bulamadıysa bile oyunu listeye ekle (manuel link vermek için)
-            results.append({
-                "title": title,
-                "image": image_url,
-                "prices": store_prices
-            })
-                
-        return results
-
-    except Exception as e:
-        st.error(f"Hata: {e}")
+            if steam_deal:
+                price_usd = float(steam_deal['price'])
+                price_tl = price_usd * usd_rate
+                return {
+                    "source": "Steam",
+                    "price_tl": price_tl,
+                    "price_usd": price_usd,
+                    "link": f"https://store.steampowered.com/app/{details['info'].get('steamAppID')}",
+                    "image": f"https://cdn.cloudflare.steamstatic.com/steam/apps/{details['info'].get('steamAppID')}/header.jpg"
+                }
+        return None
+    except:
         return None
 
 # --- ARAYÜZ ---
 
-usd_rate = get_usd_rate()
-store_mapping = get_stores()
-
-search_query = st.text_input("Hangi oyunu arıyorsunuz?", placeholder="Örn: FIFA 24, God of War, Red Dead Redemption 2...")
-
-if search_query:
-    with st.spinner(f"'{search_query}' için tüm mağazalar taranıyor..."):
-        found_games = search_game_deals(search_query, usd_rate, store_mapping)
+game_query = st.text_input("Oyun Adı Girin:", placeholder="Örn: FC 24, Cyberpunk 2077...")
+if st.button("Fiyatları Getir") or game_query:
+    
+    if game_query:
+        usd_rate = get_usd_rate()
         
-    if found_games:
-        st.success(f"Güncel Kur: 1$ = {usd_rate:.2f} TL (Fiyatlar tahmini çeviridir)")
+        col1, col2 = st.columns(2)
         
-        for game in found_games:
-            # KONTEYNER TASARIMI
-            with st.container(border=True):
-                # Sütun Oranlarını Değiştirdim: [1.5, 2.5] -> Resim Alanı Genişletildi
-                col_img, col_info = st.columns([1.5, 2.5])
-                
-                with col_img:
-                    # use_container_width=True resmi sütuna sığacak kadar büyütür
-                    if game['image']:
-                        st.image(game['image'], use_container_width=True)
+        with st.spinner('Epic Games ve Steam taranıyor...'):
+            # İki fonksiyonu da çalıştır
+            epic_data = search_epic_price(game_query)
+            steam_data = search_steam_price(game_query, usd_rate)
+        
+        # --- GÖRÜNTÜLEME ---
+        
+        if epic_data or steam_data:
+            # Ortak bir başlık veya resim kullanalım (Epic resmi daha kalitelidir genelde)
+            main_image = epic_data['image'] if epic_data else steam_data['image']
+            game_title = epic_data['title'] if epic_data else game_query
+            
+            st.image(main_image, use_container_width=True)
+            st.header(f"Sonuçlar: {game_title}")
+            
+            # Fiyatları Yan Yana Kıyasla
+            c1, c2 = st.columns(2)
+            
+            # SOL KUTU: EPIC GAMES
+            with c1:
+                st.markdown('<div class="price-box">', unsafe_allow_html=True)
+                st.image("https://upload.wikimedia.org/wikipedia/commons/3/31/Epic_Games_logo.svg", width=50)
+                st.subheader("Epic Games Store")
+                if epic_data:
+                    fiyat = epic_data['price']
+                    if fiyat == 0:
+                        st.markdown(f"<span class='epic-price'>ÜCRETSİZ</span>", unsafe_allow_html=True)
                     else:
-                        st.write("Resim Yok")
-                
-                with col_info:
-                    st.header(game['title'])
+                        st.markdown(f"<span class='epic-price'>{fiyat:.2f} ₺</span>", unsafe_allow_html=True)
                     
-                    if game['prices']:
-                        # Fiyatları listele
-                        for price in game['prices']:
-                            c1, c2, c3 = st.columns([2, 2, 2])
-                            with c1:
-                                st.markdown(f"<span class='store-name'>{price['store']}</span>", unsafe_allow_html=True)
-                            with c2:
-                                st.markdown(f"<span class='price-tag'>{price['price_tl']:.0f} ₺</span>", unsafe_allow_html=True)
-                                st.caption(f"({price['price_usd']} $)")
-                            with c3:
-                                st.link_button("Mağazaya Git 🔗", price['link'])
-                            st.divider()
-                    else:
-                        st.warning("Bu oyun için CheapShark veritabanında anlık fiyat bilgisi yok.")
-                        # Fiyat yoksa bile manuel arama butonları koyalım
-                        e_col1, e_col2 = st.columns(2)
-                        with e_col1:
-                             st.link_button("Steam'de Ara", f"https://store.steampowered.com/search/?term={game['title']}")
-                        with e_col2:
-                             st.link_button("Epic Games'te Ara", f"https://store.epicgames.com/tr/browse?q={game['title']}&sortBy=relevancy")
+                    if epic_data['original_price'] > fiyat:
+                        st.caption(f"Normalde: {epic_data['original_price']:.2f} ₺")
+                        
+                    st.link_button("Epic'ten Al", epic_data['link'])
+                else:
+                    st.warning("Epic'te bulunamadı.")
+                st.markdown('</div>', unsafe_allow_html=True)
 
-    else:
-        st.warning("Oyun bulunamadı. Tam adını yazmayı deneyin.")
-else:
-    st.info("Arama yapmak için yukarıya oyun adını yazıp Enter'a basın.")
+            # SAĞ KUTU: STEAM
+            with c2:
+                st.markdown('<div class="price-box">', unsafe_allow_html=True)
+                st.image("https://upload.wikimedia.org/wikipedia/commons/8/83/Steam_icon_logo.svg", width=50)
+                st.subheader("Steam (TR)")
+                if steam_data:
+                    st.markdown(f"<span class='steam-price'>{steam_data['price_tl']:.2f} ₺</span>", unsafe_allow_html=True)
+                    st.caption(f"({steam_data['price_usd']} USD x {usd_rate:.2f})")
+                    st.link_button("Steam'den Al", steam_data['link'])
+                else:
+                    st.warning("Steam'de bulunamadı.")
+                st.markdown('</div>', unsafe_allow_html=True)
+                
+            # Kazananı Belirle
+            st.divider()
+            if epic_data and steam_data:
+                fark = abs(epic_data['price'] - steam_data['price_tl'])
+                if epic_data['price'] < steam_data['price_tl']:
+                    st.success(f"🎉 **Epic Games** şu an **{fark:.2f} TL** daha ucuz!")
+                elif steam_data['price_tl'] < epic_data['price']:
+                    st.success(f"🎉 **Steam** şu an **{fark:.2f} TL** daha ucuz!")
+                else:
+                    st.info("İki platformda da fiyatlar yaklaşık aynı.")
+                    
+        else:
+            st.error("Oyun hiçbir mağazada bulunamadı. İsmi doğru yazdığınızdan emin olun.")
